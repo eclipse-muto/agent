@@ -1,0 +1,446 @@
+{
+    "name": "Muto Donkeycar Base Stack",
+    "context": "eteration_office",
+    "stackId": "ai.composiv.sandbox.f1tenth:donkey_base.launch",
+    "arg": [
+      {
+        "name": "run_camera",
+        "value": "true"
+      },
+      {
+        "name": "donkeyws",
+        "value": "$(find muto_agent)/../.."
+      },
+      {
+        "name": "amcl",
+        "value": "false"
+      },
+      {
+        "name": "safety",
+        "value": "true"
+      },
+      {
+        "name": "gap",
+        "value": "true"
+      },
+      {
+        "name": "map",
+        "value": "$(find muto_agent)/../../maps/attic3.yaml"
+      }
+    ],
+    "param": [
+      {
+        "namespace": "esc",
+        "from": "$(arg donkeyws)/configs/f1tenthcompat.yaml"
+      }
+    ],
+    "node": [
+      {
+        "name": "map_server",
+        "pkg": "map_server",
+        "exec": "map_server",
+        "args": "$(arg map)"
+      },
+      {
+        "namespace": "esc",
+        "name": "i2cpwm_board",
+        "pkg": "i2cpwm_board",
+        "exec": "i2cpwm_board"
+      },
+      {
+        "namespace": "esc",
+        "name": "joy_node",
+        "pkg": "joy",
+        "exec": "joy_node",
+        "respawn": "true"
+      },
+      {
+        "namespace": "esc",
+        "name": "joy_teleop",
+        "pkg": "esc_driver",
+        "exec": "joy_teleop.py"
+      },
+      {
+        "namespace": "esc",
+        "name": "esc_driver",
+        "pkg": "esc_driver",
+        "exec": "esc_driver.py"
+      },
+      {
+        "namespace": "esc",
+        "name": "esc_ackermann",
+        "pkg": "esc_ackermann",
+        "exec": "ackermann_to_esc_node",
+        "remap": [
+          {
+            "from": "ackermann_cmd",
+            "to": "low_level/ackermann_cmd_mux/output"
+          }
+        ]
+      },
+      {
+        "namespace": "esc",
+        "name": "esc_to_odom",
+        "pkg": "esc_ackermann",
+        "exec": "esc_to_odom_node"
+      },
+      {
+        "namespace": "esc",
+        "name": "mux_chainer",
+        "pkg": "topic_tools",
+        "exec": "relay",
+        "args": "/esc/high_level/ackermann_cmd_mux/output /esc/low_level/ackermann_cmd_mux/input/navigation"
+      },
+      {
+        "namespace": "esc",
+        "name": "mux_topic_backward_compat_safety",
+        "pkg": "topic_tools",
+        "exec": "relay",
+        "args": "/esc/ackermann_cmd_mux/input/safety /esc/low_level/ackermann_cmd_mux/input/safety"
+      },
+      {
+        "namespace": "esc",
+        "name": "mux_topic_backward_compat_teleop",
+        "pkg": "topic_tools",
+        "exec": "relay",
+        "args": "/esc/ackermann_cmd_mux/input/teleop /esc/low_level/ackermann_cmd_mux/input/teleop"
+      },
+      {
+        "namespace": "esc",
+        "name": "mux_topic_backward_compat_navigation",
+        "pkg": "topic_tools",
+        "exec": "relay",
+        "args": "/esc/ackermann_cmd_mux/input/navigation /esc/high_level/ackermann_cmd_mux/input/nav_0"
+      },
+      {
+        "namespace": "esc",
+        "name": "zero_ackermann_cmd",
+        "pkg": "rostopic",
+        "exec": "rostopic",
+        "args": "pub -r 6 high_level/ackermann_cmd_mux/input/default ackermann_msgs/AckermannDriveStamped '{header: auto, drive: {steering_angle: 0.0, speed: 0.0} }'"
+      },
+      {
+        "namespace": "esc/high_level",
+        "name": "ackermann_cmd_mux_nodelet_manager",
+        "pkg": "nodelet",
+        "exec": "nodelet",
+        "args": "manager"
+      },
+      {
+        "namespace": "esc/high_level",
+        "name": "ackermann_cmd_mux",
+        "pkg": "nodelet",
+        "exec": "nodelet",
+        "args": "load ackermann_cmd_mux/AckermannCmdMuxNodelet ackermann_cmd_mux_nodelet_manager",
+        "param": [
+          {
+            "name": "yaml_cfg_file",
+            "value": "$(arg donkeyws)/configs/high_level_mux.yaml"
+          }
+        ]
+      },
+      {
+        "namespace": "esc/low_level",
+        "name": "ackermann_cmd_mux_nodelet_manager",
+        "pkg": "nodelet",
+        "exec": "nodelet",
+        "args": "manager"
+      },
+      {
+        "namespace": "esc/low_level",
+        "name": "ackermann_cmd_mux",
+        "pkg": "nodelet",
+        "exec": "nodelet",
+        "args": "load ackermann_cmd_mux/AckermannCmdMuxNodelet ackermann_cmd_mux_nodelet_manager",
+        "param": [
+          {
+            "name": "yaml_cfg_file",
+            "value": "$(arg donkeyws)/configs/low_level_mux.yaml"
+          }
+        ]
+      },
+      {
+        "name": "rplidarNode",
+        "pkg": "rplidar_ros",
+        "exec": "rplidarNode",
+        "args": "load ackermann_cmd_mux/AckermannCmdMuxNodelet ackermann_cmd_mux_nodelet_manager",
+        "param": [
+          {
+            "name": "serial_port",
+            "value": "/dev/ttyUSB0"
+          },
+          {
+            "name": "serial_baudrate",
+            "value": "115200"
+          },
+          {
+            "name": "frame_id",
+            "value": "laser"
+          },
+          {
+            "name": "inverted",
+            "value": "false"
+          },
+          {
+            "name": "angle_compensate",
+            "value": "true"
+          }
+        ]
+      },
+      {
+        "name": "main_camera",
+        "pkg": "jetson_camera",
+        "exec": "jetson_camera_node",
+        "args": "load ackermann_cmd_mux/AckermannCmdMuxNodelet ackermann_cmd_mux_nodelet_manager",
+        "param": [
+          {
+            "name": "cap_width",
+            "value": "320"
+          },
+          {
+            "name": "cap_height",
+            "value": "240"
+          },
+          {
+            "name": "width",
+            "value": "320"
+          },
+          {
+            "name": "height",
+            "value": "240"
+          },
+          {
+            "name": "fps",
+            "value": "10"
+          },
+          {
+            "name": "flip_method",
+            "value": "6"
+          },
+          {
+            "name": "frame_id",
+            "value": "main_camera_optical"
+          },
+          {
+            "name": "camera_info_url",
+            "value": "file://$(find jetson_camera)/camera_info/raspicam_v2.yaml"
+          }
+        ]
+      },
+      {
+        "name": "web_video_server",
+        "pkg": "web_video_server",
+        "exec": "web_video_server"
+      },
+      {
+        "pkg": "laser_scan_matcher",
+        "exec": "laser_scan_matcher_node",
+        "name": "laser_scan_matcher_node",
+        "param": [
+          {
+            "name": "fixed_frame",
+            "value": "odom"
+          },
+          {
+            "name": "use_alpha_beta",
+            "value": "true"
+          },
+          {
+            "name": "max_iterations",
+            "value": "10"
+          }
+        ]
+      },
+      {
+        "pkg": "amcl",
+        "exec": "amcl",
+        "name": "amcl",
+        "param": [
+          {
+            "name": "use_map_topic",
+            "value": "true"
+          },
+          {
+            "name": "odom_model_type",
+            "value": "diff"
+          },
+          {
+            "name": "odom_alpha5",
+            "value": "0.1"
+          },
+          {
+            "name": "gui_publish_rate",
+            "value": "4.0"
+          },
+          {
+            "name": "laser_max_beams",
+            "value": "60"
+          },
+          {
+            "name": "laser_max_range",
+            "value": "12.0"
+          },
+          {
+            "name": "min_particles",
+            "value": "500"
+          },
+          {
+            "name": "max_particles",
+            "value": "2000"
+          },
+          {
+            "name": "kld_err",
+            "value": "0.01"
+          },
+          {
+            "name": "kld_z",
+            "value": "0.99"
+          },
+          {
+            "name": "odom_alpha1",
+            "value": "0.6"
+          },
+          {
+            "name": "odom_alpha2",
+            "value": "0.4"
+          },
+          {
+            "name": "odom_alpha3",
+            "value": "0.4"
+          },
+          {
+            "name": "odom_alpha4",
+            "value": "0.6"
+          },
+          {
+            "name": "laser_min_range",
+            "value": "0.2"
+          },
+          {
+            "name": "laser_max_range",
+            "value": "8.0"
+          },
+          {
+            "name": "laser_max_beams",
+            "value": "90"
+          },
+          {
+            "name": "laser_z_hit",
+            "value": "0.95"
+          },
+          {
+            "name": "laser_z_short",
+            "value": "0.1"
+          },
+          {
+            "name": "laser_z_max",
+            "value": "0.05"
+          },
+          {
+            "name": "laser_z_rand",
+            "value": "0.05"
+          },
+          {
+            "name": "laser_sigma_hit",
+            "value": "0.2"
+          },
+          {
+            "name": "laser_lambda_short",
+            "value": "0.1"
+          },
+          {
+            "name": "laser_model_type",
+            "value": "likelihood_field"
+          },
+          {
+            "name": "laser_likelihood_max_dist",
+            "value": "2.0"
+          },
+          {
+            "name": "update_min_d",
+            "value": "0.25"
+          },
+          {
+            "name": "update_min_a",
+            "value": "0.2"
+          },
+          {
+            "name": "global_frame_id",
+            "value": "map"
+          },
+          {
+            "name": "resample_interval",
+            "value": "1"
+          },
+          {
+            "name": "use_map_topic",
+            "value": "true"
+          },
+          {
+            "name": "first_map_only",
+            "value": "true"
+          },
+          {
+            "name": "odom_frame_id",
+            "value": "odom"
+          },
+          {
+            "name": "base_frame_id",
+            "value": "base_link"
+          },
+          {
+            "name": "resample_interval",
+            "value": "1"
+          },
+          {
+            "name": "transform_tolerance",
+            "value": "1.0"
+          },
+          {
+            "name": "recovery_alpha_slow",
+            "value": "0.0"
+          },
+          {
+            "name": "recovery_alpha_fast",
+            "value": "0.0"
+          },
+          {
+            "name": "initial_pose_x",
+            "value": "0.0"
+          },
+          {
+            "name": "initial_pose_y",
+            "value": "0.0"
+          },
+          {
+            "name": "initial_pose_a",
+            "value": "0.0"
+          }
+        ],
+        "remap": [
+          {
+            "from": "scan",
+            "to": "scan"
+          }
+        ]
+      },
+      {
+        "name": "base_link_to_imu",
+        "pkg": "tf2_ros",
+        "exec": "static_transform_publisher",
+        "args": "0.245 0.0 0.117    0.7071067811865475 0.7071067811865475 0.0 0.0 /base_link /base_imu_link"
+      },
+      {
+        "name": "baselink_to_camera",
+        "pkg": "tf2_ros",
+        "exec": "static_transform_publisher",
+        "args": "0.0 0.0 0.0 0.0 0.0 0.0 base_link main_camera_optical"
+      },
+      {
+        "name": "baselink_to_laser",
+        "pkg": "tf2_ros",
+        "exec": "static_transform_publisher",
+        "args": "0 0.0 0 0.0 0.0 0.0 base_link laser"
+      }
+    ]
+  }

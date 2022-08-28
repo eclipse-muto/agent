@@ -1,0 +1,41 @@
+{
+    "thingId": "ai.composiv.sandbox.f1tenth:testcar-xavier-01",
+    "policyId": "ai.composiv.sandbox.f1tenth:testcar-xavier-01",
+    "definition": "ai.composiv.sandbox.f1tenth.simulator:TestCar:1.0.0",
+    "attributes": {
+      "serial": "testcar-xavier-01",
+      "type": "simulator",
+      "manufacturer": "Eteration"
+    },
+    "features": {
+      "context": {
+        "properties": {
+          "name": "office-area-2"
+        }
+      },
+      "stack": {
+        "properties": {
+          "current": {
+            "stackId": "ai.composiv.sandbox.f1tenth:testcar_base.launch",
+            "state": "killed"
+          }
+        }
+      },
+      "telemetry": {
+        "properties": {
+          "velocity": 0,
+          "steering_angle": 0
+        }
+      },
+      "sensors": {
+        "properties": {
+          "controller": {},
+          "camera": {},
+          "imu": {}
+        }
+      },
+      "rosModel": {
+        "properties": {}
+      }
+    }
+  }
