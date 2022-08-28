@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 #
 #  Copyright (c) 2022 Composiv.ai, Eteration A.S. and others
 #
@@ -14,7 +15,6 @@
 #    Composiv.ai, Eteration A.S. - initial API and implementation
 #
 #
-#!/usr/bin/env python
 
 import json
 import uuid
