@@ -18,6 +18,7 @@ jobs:
           git clone https://github.com/eclipse-muto/core.git   src/core
           . /opt/ros/noetic/setup.sh
           catkin_make
-          catkin_make test
+          . $(pwd)/devel/setup.sh
+          catkin_make test || true
           catkin_test_results --all --verbose
         name: Build in ros container
