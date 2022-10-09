@@ -1,3 +1,4 @@
+[![Catkin Make (Build and Test)](https://github.com/eclipse-muto/agent/actions/workflows/catkin-build.yml/badge.svg?branch=main)](https://github.com/eclipse-muto/agent/actions/workflows/catkin-build.yml)
 # Muto Agent
 
 ## Build
