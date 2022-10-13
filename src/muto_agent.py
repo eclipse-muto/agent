@@ -26,9 +26,8 @@ import paho.mqtt.packettypes as packettypes
 import core.ditto.twin as twin
 import core.model.edge_device as edge
 import agent.mqtt.router as router
+import agent.ros.plugin as rplugin
 
-
-from ackermann_msgs.msg import AckermannDriveStamped
 from std_msgs.msg import String
 from muto_msgs.msg import MutoAction
 
@@ -46,16 +45,16 @@ class MutoAgent(object):
         self.twin = twin.Twin(node='muto_agent',config=self.muto)
 
        # Subscribers
-        rospy.Subscriber(rospy.get_param("muto_agent/muto/nav_topic"),AckermannDriveStamped, self.on_nav_callback, queue_size=1)
         rospy.Subscriber(rospy.get_param("muto_agent/muto/twin_topic"),String, self.on_twin_callback, queue_size=100)
         self.action_publisher = rospy.Publisher(rospy.get_param("muto_agent/muto/stack_topic"), MutoAction, queue_size=10)
-        self.router = router.Router(self.twin.topic, self.action_publisher)
 
 
         self.mqtt_client = mqtt.Client(self.twin.uniqueName, reconnect_on_failure=True, protocol=mqtt.MQTTv5)
         self.mqtt_client.on_connect = lambda xx, userdata, flags, reason, properties: self.on_mqtt_connect(userdata, flags,reason, properties)
         self.mqtt_client.on_message = lambda xx, userdata, msg: self.on_mqtt_message(userdata, msg)
 
+        plugin = rplugin.RosCommandsPlugin(self.muto.get('commands'), self.mqtt_client)
+        self.router = router.Router(self.muto, self.twin.topic, self.action_publisher, plugin)
 
         self.edge_device = edge.EdgeDevice(self.twin, self.muto)
         self.edge_device.connect()
@@ -97,7 +96,10 @@ class MutoAgent(object):
                 correlationData = msg.properties.CorrelationData
 
             #payload = json.loads(m_decode)
-            response  = self.router.route(self.twin.getContext(), msg.topic, m_decode)
+            meta = None
+            if not response_topic is None and not correlationData is None:
+                meta = { "topic": response_topic, "correlation": correlationData.decode("utf-8","ignore")}
+            response  = self.router.route(self.twin.getContext(), msg.topic, m_decode, meta)
             if not response_topic is None and not response is None:
                 properties=mqtt.Properties(packettypes.PacketTypes.PUBLISH)
                 properties.CorrelationData=correlationData
@@ -106,15 +108,7 @@ class MutoAgent(object):
                 self.mqtt_client.publish(response_topic,response,properties=properties)
 
         except Exception as e:
-            print("MQTT Message Received failed:", str(e))
-
-    # Input data is AckermannDriveStamped message from nav topic
-    # Publishes velocity and steering angle to twin channel
-    def on_nav_callback(self, msg):
-        if self.mqtt_client.is_connected:
-            self.twin.publishTelemetry("/features/telemetry", 
-            {"properties": { "velocity": msg.drive.speed, "steering_angle":  msg.drive.steering_angle }})
-
+            print("MQTT Message Received failed: {}".format(e))
 
 
 def main():

@@ -18,19 +18,26 @@
 #!/usr/bin/env python
 import json
 import re
+from muto_msgs.msg import MutoActionMeta
 from muto_msgs.msg import MutoAction
 
 class Router(object):
 
-    def __init__(self, topic, publisher):
+    def __init__(self, context, topic, publisher, plugin):
         self.publisher = publisher
         self.topic = topic
+        self.command_plugin = plugin
    
-    def route(self,context, action, payload):
-        print("Compose route:", action, payload)
+    def route(self,context, action, payload, meta=None):
+        print("Compose route:", action,payload)
         mesg = MutoAction()
         mesg.context = json.dumps(context)
         mesg.payload = payload
+        if not meta is None:
+          mesg.meta = MutoActionMeta()
+          mesg.meta.topic = meta["topic"]
+          mesg.meta.correlation = meta["correlation"]
+          
         expressions = re.findall('.*/stack/commands/(.*)', action)
         for method in expressions:
           mesg.method = method
@@ -39,5 +46,7 @@ class Router(object):
         expressions = re.findall('.*/agent/commands/(.*)', action)
         for method in expressions:
           mesg.method = method
-          return action + "is not implemented"
+          if not self.command_plugin is None:
+            result = self.command_plugin.on_command_callback(mesg)
+            return json.dumps(result.output.payload)
         return "None"
