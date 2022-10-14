@@ -99,14 +99,21 @@ class MutoAgent(object):
             meta = None
             if not response_topic is None and not correlationData is None:
                 meta = { "topic": response_topic, "correlation": correlationData.decode("utf-8","ignore")}
-            response  = self.router.route(self.twin.getContext(), msg.topic, m_decode, meta)
-            if not response_topic is None and not response is None:
-                properties=mqtt.Properties(packettypes.PacketTypes.PUBLISH)
-                properties.CorrelationData=correlationData
-                print('Responding on response topic:', properties)
-                #respond
-                self.mqtt_client.publish(response_topic,response,properties=properties)
-
+            try:
+                response  = self.router.route(self.twin.getContext(), msg.topic, m_decode, meta)
+                if not response_topic is None and not response is None:
+                    properties=mqtt.Properties(packettypes.PacketTypes.PUBLISH)
+                    properties.CorrelationData=correlationData
+                    print('Responding on response topic:', properties)
+                    #respond
+                    self.mqtt_client.publish(response_topic,response,properties=properties)
+            except Exception as fe:
+                    if not response_topic is None:
+                        properties=mqtt.Properties(packettypes.PacketTypes.PUBLISH)
+                        properties.CorrelationData=correlationData
+                        status = { "status": "EXCEPTION", "error": "{}".format(fe)}
+                        self.mqtt_client.publish(response_topic,json.dumps(status),properties=properties)
+                        raise fe
         except Exception as e:
             print("MQTT Message Received failed: {}".format(e))
 

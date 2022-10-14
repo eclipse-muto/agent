@@ -26,10 +26,11 @@ class RosNodeCommands(object):
 
     def handle_node_list(self, req):  # list active node
         nodeNames = rosnode.get_node_names()
-        if len(nodeNames) > 1:
-            msg = command.to_stdmsgs_string(str(nodeNames))
-        else:
-            msg = command.to_stdmsgs_string("Something Went Wrong!")
+        result = { "nodes": []}
+        for name in nodeNames:
+            info = self.get_node_info(name)
+            result["nodes"].append({ "name": name, "info": info})
+        msg = command.to_stdmsgs_string(json.dumps(result))
         return command.to_commandoutput(msg.data)
 
     def handle_node_info(self, req):  # print information about node
@@ -39,26 +40,28 @@ class RosNodeCommands(object):
             info = self.get_node_info(requestedNode)
             msg = command.to_stdmsgs_string(json.dumps(info))
             return command.to_commandoutput(msg.data)
-        return command.to_commandoutput("")
+        return command.to_commandoutput("{}")
 
     def handle_node_kill(self, req):  # kill a running node
-        requestedNode = "/"+req.input.split("/")[1]
+        payload = json.loads(req.input.payload)
+        requestedNode = payload["node"]
         nodeNames = rosnode.get_node_names()
+        status = { "status": "NOTFOUND"}
         if requestedNode in nodeNames:
             rosnode.kill_nodes(requestedNode)
-            msg = command.to_stdmsgs_string("{} node killed".format(requestedNode))
-        else:
-            msg = command.to_stdmsgs_string(requestedNode + " node is not defined")
+            status = { "status": "KILLED", "node": requestedNode}
+        msg = command.to_stdmsgs_string(json.dumps(status))
         return command.to_commandoutput(msg.data)
 
     def handle_node_ping(self, req):
-        requestedNode = "/" + req.input.split("/")[1]
+        payload = json.loads(req.input.payload)
+        requestedNode = payload["node"]
         nodeNames = rosnode.get_node_names()
+        status = { "status": "NOTFOUND"}
         if requestedNode in nodeNames:
             node_ping = rosnode.rosnode_ping(requestedNode, max_count=1)
-            msg = command.to_stdmsgs_string(" node ping : {}".format(node_ping))
-        else:
-            msg = command.to_stdmsgs_string(requestedNode + " node is not defined")
+            status = { "status": node_ping, "node": requestedNode}
+        msg = command.to_stdmsgs_string(json.dumps(status))
         return command.to_commandoutput(msg.data)
 
     def get_node_info(self, node_name):

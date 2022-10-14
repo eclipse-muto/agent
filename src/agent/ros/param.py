@@ -28,48 +28,47 @@ class RosParamCommands(object):
     def handle_param_get(self, req):
         payload = json.loads(req.input.payload)
         requested_key = payload["param"]
+        param = {"name": requested_key,
+                 "value": "",}
         if rospy.has_param(requested_key):
-            msg = command.to_stdmsgs_string(str(rosparam.get_param(requested_key)))
-            return command.to_commandoutput(msg.data)
-        return command.to_commandoutput("{}")
+            param["value"] = rosparam.get_param(requested_key)
+        msg = command.to_stdmsgs_string(json.dumps(param))
+        return command.to_commandoutput(msg.data)
 
 
     def handle_param_set(self, req):
         payload = json.loads(req.input.payload)
         requested_key = payload["param"]
         new_value = payload["value"]
-        param = {"paramKey": requested_key,
-                 "prevParamValue": "", "newParamValue": ""}
+        param = {"name": requested_key,
+                 "value": "", "previosValue": ""}
         if rospy.has_param(requested_key):
             # regex should be implemented and prev value - current val should be checked
-            param["prevParamValue"] = rosparam.get_param(requested_key)
+            param["previosValue"] = rosparam.get_param(requested_key)
             rospy.set_param(requested_key, new_value)
-            param["newParamValue"] = rosparam.get_param(requested_key)
-            if param["newParamValue"] == new_value:
-                msg = command.to_stdmsgs_string(str(param))
-        else:
-            msg = command.to_stdmsgs_string(
-                " Make Sure That {} exists !".format(requested_key))
-        return command.to_commandoutput(msg.data)
+            param["value"] = rosparam.get_param(requested_key)
+            msg = command.to_stdmsgs_string(json.dumps(param))
+            return command.to_commandoutput(msg.data)
+        return command.to_commandoutput(req.input.payload)
+        
 
     def handle_param_list(self, req):
         parameterNames = rospy.get_param_names()
-        if len(parameterNames) > 1:
-            msg = command.to_stdmsgs_string(str(parameterNames))
-        else:
-            msg = command.to_stdmsgs_string("Something Went Wrong!")
+        result = { "params": [] }
+        for p in parameterNames:
+            result["params"].append({"name": p, "value": rosparam.get_param(p) })
+        msg = command.to_stdmsgs_string(json.dumps(result))
         return command.to_commandoutput(msg.data)
 
     def handle_param_delete(self, req):  # Delete a parameter value
         payload = json.loads(req.input.payload)
         requested_key = payload["param"]
+        status = { "status": "NOTFOUND"}
         if rospy.has_param(requested_key):
             if rosparam.get_param(requested_key) is not None:
                 rosparam.delete_param(requested_key)
-                msg = command.to_stdmsgs_string((" Parameter value of {} has been deleted !".format(requested_key)))
-
-        else:
-            msg = command.to_stdmsgs_string(" Make Sure That {} exists !".format(requested_key))
+                status = { "status": "DELETED", "param": requested_key}
+        msg = command.to_stdmsgs_string(json.dumps(status))
         return command.to_commandoutput(msg.data)
 
 

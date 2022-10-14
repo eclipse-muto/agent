@@ -30,25 +30,19 @@ class RosTopicCommands(object):
         payload = json.loads(req.input.payload)
         requested_topic = payload["topic"]
         topic_type, real_topic, msg_eval = rostopic.get_topic_type(requested_topic)
-
+        status = { "status": "NOTFOUND"}
         if real_topic is not None:
             info = self.get_topic_info(requested_topic)
             msg = command.to_stdmsgs_string(json.dumps(info))
             return command.to_commandoutput(msg.data)
-        return command.to_commandoutput("")
+        msg = command.to_stdmsgs_string(json.dumps(status))
+        return command.to_commandoutput(msg.data)
 
     #
     # Adapted from rospy
     #
     def get_topic_info(self, topic):
-        """
-        Get human-readable topic description
-
-        :param topic: topic name, ``str``
-        """
-
         import itertools
-
         def topic_type(t, topic_types):
             matches = [t_type for t_name, t_type in topic_types if t_name == t]
             if matches:
@@ -93,13 +87,26 @@ class RosTopicCommands(object):
         payload = json.loads(req.input.payload)
         topic = payload.get('topic')
         action = payload.get('action')
+        status = { "status": "NOTFOUND", "topic": topic}
+        if action == "reset":
+            for e in self.echo:
+                current = self.echo.get(e)
+                if not current is None:
+                    current.stop()
+            status = { "status": "RESET", "topic": "all topics" }
+            msg = command.to_stdmsgs_string(json.dumps(status))
+            return command.to_commandoutput(msg.data)
         if not topic is None:
             current = self.echo.get(topic)
             if not current is None:
                 current.stop()
+                status = { "status": "STOPPED", "topic": topic }
             if not action == "stop":
                 newTopicEcho = echo.TopicEcho(payload, self.mqtt_client)
                 self.echo[topic] = newTopicEcho
                 newTopicEcho.start()
-        return command.to_commandoutput('{ "status": 0 }')
+                status = { "status": "STARTED", "topic": topic }
+
+        msg = command.to_stdmsgs_string(json.dumps(status))
+        return command.to_commandoutput(msg.data)
 
