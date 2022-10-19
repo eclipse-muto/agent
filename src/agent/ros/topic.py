@@ -14,8 +14,9 @@ import muto_msgs.srv as muto_srv
 
 class RosTopicCommands(object):
 
-    def __init__(self, mqtt_client):
+    def __init__(self, twin, mqtt_client):
         self.mqtt_client = mqtt_client
+        self.twin = twin
         self.echo = {}
         self.rostopic_info = rospy.Service(
             "rostopic_info", muto_srv.CommandPlugin, self.handle_topic_info)
@@ -88,24 +89,44 @@ class RosTopicCommands(object):
         topic = payload.get('topic')
         action = payload.get('action')
         status = { "status": "NOTFOUND", "topic": topic}
-        if action == "reset":
-            for e in self.echo:
-                current = self.echo.get(e)
+        try:
+            if action == "reset":
+                for e in self.echo:
+                    current = self.echo.get(e)
+                    if not current is None:
+                        current.stop()
+                status = { "status": "RESET", "topic": "all topics" }
+                msg = command.to_stdmsgs_string(json.dumps(status))
+                return command.to_commandoutput(msg.data)
+            if not topic is None:
+                current = self.echo.get(topic)
                 if not current is None:
                     current.stop()
-            status = { "status": "RESET", "topic": "all topics" }
-            msg = command.to_stdmsgs_string(json.dumps(status))
-            return command.to_commandoutput(msg.data)
-        if not topic is None:
-            current = self.echo.get(topic)
-            if not current is None:
-                current.stop()
-                status = { "status": "STOPPED", "topic": topic }
-            if not action == "stop":
-                newTopicEcho = echo.TopicEcho(payload, self.mqtt_client)
-                self.echo[topic] = newTopicEcho
-                newTopicEcho.start()
-                status = { "status": "STARTED", "topic": topic }
+                    status = { "status": "STOPPED", "topic": topic }
+                if action == "stop":
+                    newTopicEcho = echo.TopicEcho(payload, self.twin, self.mqtt_client)
+                    self.echo[topic] = newTopicEcho
+                    newTopicEcho.register()
+                    newTopicEcho.stop()
+                    status = { "status": "STOPPED", "topic": topic }
+                if action == "start":
+                    newTopicEcho = echo.TopicEcho(payload, self.twin, self.mqtt_client)
+                    self.echo[topic] = newTopicEcho
+                    newTopicEcho.register()
+                    newTopicEcho.start()
+                    status = { "status": "STARTED", "topic": topic }
+                if action == "delete":
+                    newTopicEcho = echo.TopicEcho(payload, self.twin, self.mqtt_client)
+                    newTopicEcho.delete()
+                    if not current is None:
+                        self.echo.pop(topic)
+                    status = { "status": "DELETED", "topic": topic }
+                if action == "register":
+                    newTopicEcho = echo.TopicEcho(payload, self.twin, self.mqtt_client)
+                    self.echo[topic] = newTopicEcho
+                    newTopicEcho.register()
+        except Exception as e:
+            status = { "status": "EXCEPTION", "exception": "{}".format(e) }
 
         msg = command.to_stdmsgs_string(json.dumps(status))
         return command.to_commandoutput(msg.data)

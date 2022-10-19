@@ -18,15 +18,16 @@ class CommandRouter(object):
 
 class RosCommandsPlugin(object):
 
-    def __init__(self, manifest, mqtt_client):
+    def __init__(self, manifest, twin, mqtt_client):
         self.manifest = manifest
+        self.twin = twin
         self.sub = None
         self.topic_timer = None
         self.mqtt_client = mqtt_client
         self.echo = {}
         
         self.node_cmds = rnode.RosNodeCommands(mqtt_client)
-        self.topic_cmds = rtopic.RosTopicCommands(mqtt_client)
+        self.topic_cmds = rtopic.RosTopicCommands(twin, mqtt_client)
         self.param_cmds = rparam.RosParamCommands(mqtt_client)
 
         self.bootstrap()

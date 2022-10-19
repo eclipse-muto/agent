@@ -53,7 +53,7 @@ class MutoAgent(object):
         self.mqtt_client.on_connect = lambda xx, userdata, flags, reason, properties: self.on_mqtt_connect(userdata, flags,reason, properties)
         self.mqtt_client.on_message = lambda xx, userdata, msg: self.on_mqtt_message(userdata, msg)
 
-        plugin = rplugin.RosCommandsPlugin(self.muto.get('commands'), self.mqtt_client)
+        plugin = rplugin.RosCommandsPlugin(self.muto.get('commands'), self.twin, self.mqtt_client)
         self.router = router.Router(self.muto, self.twin.topic, self.action_publisher, plugin)
 
         self.edge_device = edge.EdgeDevice(self.twin, self.muto)
