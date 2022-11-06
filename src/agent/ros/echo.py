@@ -41,7 +41,7 @@ class TopicEcho(object):
         if not manifest.get("rate", "5000") is None:
             self.rate = float(manifest.get("rate", "5000"))
         
-        self.lastpublish = time.monotonic_ns() * 0.000001
+        self.lastpublish = time.time()
         
         try:
             ttype, tname,_x = rostopic.get_topic_type(self.topic)
@@ -87,8 +87,8 @@ class TopicEcho(object):
             
     def on_topic_callback(self, msg):
         if msg:
-            current = time.monotonic_ns() * 0.000001
-            diff = current - self.lastpublish
+            current = time.time()
+            diff = (current - self.lastpublish)*1000
             if diff > self.rate:
                 self.lastpublish = current
                 reply = jconv.convert_ros_message_to_json(msg)
