@@ -1,3 +1,20 @@
+#
+#  Copyright (c) 2022 Composiv.ai, Eteration A.S. and others
+#
+# All rights reserved. This program and the accompanying materials
+# are made available under the terms of the Eclipse Public License v2.0
+# and Eclipse Distribution License v1.0 which accompany this distribution.
+#
+# The Eclipse Public License is available at
+#    http://www.eclipse.org/legal/epl-v10.html
+# and the Eclipse Distribution License is available at
+#   http://www.eclipse.org/org/documents/edl-v10.php.
+#
+# Contributors:
+#    Composiv.ai, Eteration A.S. - initial API and implementation
+#
+#
+
 import json
 import rospy
 import rosparam
@@ -33,6 +50,7 @@ class RosParamCommands(object):
         if rospy.has_param(requested_key):
             param["value"] = rosparam.get_param(requested_key)
         msg = command.to_stdmsgs_string(json.dumps(param))
+        command.to_responsetopic(self.mqtt_client, req, param)
         return command.to_commandoutput(msg.data)
 
 
@@ -48,6 +66,7 @@ class RosParamCommands(object):
             rospy.set_param(requested_key, new_value)
             param["value"] = rosparam.get_param(requested_key)
             msg = command.to_stdmsgs_string(json.dumps(param))
+            command.to_responsetopic(self.mqtt_client, req, param)
             return command.to_commandoutput(msg.data)
         return command.to_commandoutput(req.input.payload)
         
@@ -58,6 +77,7 @@ class RosParamCommands(object):
         for p in parameterNames:
             result["params"].append({"name": p, "value": rosparam.get_param(p) })
         msg = command.to_stdmsgs_string(json.dumps(result))
+        command.to_responsetopic(self.mqtt_client, req, result)
         return command.to_commandoutput(msg.data)
 
     def handle_param_delete(self, req):  # Delete a parameter value
@@ -68,6 +88,7 @@ class RosParamCommands(object):
             if rosparam.get_param(requested_key) is not None:
                 rosparam.delete_param(requested_key)
                 status = { "status": "DELETED", "param": requested_key}
+        command.to_responsetopic(self.mqtt_client, req, status)
         msg = command.to_stdmsgs_string(json.dumps(status))
         return command.to_commandoutput(msg.data)
 

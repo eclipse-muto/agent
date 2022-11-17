@@ -1,3 +1,20 @@
+#
+#  Copyright (c) 2022 Composiv.ai, Eteration A.S. and others
+#
+# All rights reserved. This program and the accompanying materials
+# are made available under the terms of the Eclipse Public License v2.0
+# and Eclipse Distribution License v1.0 which accompany this distribution.
+#
+# The Eclipse Public License is available at
+#    http://www.eclipse.org/legal/epl-v10.html
+# and the Eclipse Distribution License is available at
+#   http://www.eclipse.org/org/documents/edl-v10.php.
+#
+# Contributors:
+#    Composiv.ai, Eteration A.S. - initial API and implementation
+#
+#
+
 import json
 import socket
 import rospy
@@ -31,6 +48,7 @@ class RosNodeCommands(object):
             info = self.get_node_info(name)
             result["nodes"].append({ "name": name, "info": info})
         msg = command.to_stdmsgs_string(json.dumps(result))
+        command.to_responsetopic(self.mqtt_client, req, result)
         return command.to_commandoutput(msg.data)
 
     def handle_node_info(self, req):  # print information about node
@@ -39,6 +57,7 @@ class RosNodeCommands(object):
         if not requestedNode is None:
             info = self.get_node_info(requestedNode)
             msg = command.to_stdmsgs_string(json.dumps(info))
+            command.to_responsetopic(self.mqtt_client, req, info)
             return command.to_commandoutput(msg.data)
         return command.to_commandoutput("{}")
 
@@ -61,6 +80,8 @@ class RosNodeCommands(object):
         if requestedNode in nodeNames:
             node_ping = rosnode.rosnode_ping(requestedNode, max_count=1)
             status = { "status": node_ping, "node": requestedNode}
+            command.to_responsetopic(self.mqtt_client, req, status)
+
         msg = command.to_stdmsgs_string(json.dumps(status))
         return command.to_commandoutput(msg.data)
 

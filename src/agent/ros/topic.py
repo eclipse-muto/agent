@@ -1,3 +1,20 @@
+#
+#  Copyright (c) 2022 Composiv.ai, Eteration A.S. and others
+#
+# All rights reserved. This program and the accompanying materials
+# are made available under the terms of the Eclipse Public License v2.0
+# and Eclipse Distribution License v1.0 which accompany this distribution.
+#
+# The Eclipse Public License is available at
+#    http://www.eclipse.org/legal/epl-v10.html
+# and the Eclipse Distribution License is available at
+#   http://www.eclipse.org/org/documents/edl-v10.php.
+#
+# Contributors:
+#    Composiv.ai, Eteration A.S. - initial API and implementation
+#
+#
+
 import json
 import socket
 import rospy
@@ -35,8 +52,10 @@ class RosTopicCommands(object):
         if real_topic is not None:
             info = self.get_topic_info(requested_topic)
             msg = command.to_stdmsgs_string(json.dumps(info))
+            command.to_responsetopic(self.mqtt_client, req, info)
             return command.to_commandoutput(msg.data)
         msg = command.to_stdmsgs_string(json.dumps(status))
+        command.to_responsetopic(self.mqtt_client, req, status)
         return command.to_commandoutput(msg.data)
 
     #
@@ -81,6 +100,7 @@ class RosTopicCommands(object):
         master = rosgraph.Master('/rostopic')
         pubs, subs = rostopic.get_topic_list(master=master)
         msg = command.to_stdmsgs_string(json.dumps({"pubs": pubs, "subs": subs}))
+        command.to_responsetopic(self.mqtt_client, req, {"pubs": pubs, "subs": subs})
         return command.to_commandoutput(msg.data)
 
     # rostopic_echo service
@@ -97,6 +117,7 @@ class RosTopicCommands(object):
                         current.stop()
                 status = { "status": "RESET", "topic": "all topics" }
                 msg = command.to_stdmsgs_string(json.dumps(status))
+                command.to_responsetopic(self.mqtt_client, req, status)
                 return command.to_commandoutput(msg.data)
             if not topic is None:
                 current = self.echo.get(topic)
@@ -128,6 +149,7 @@ class RosTopicCommands(object):
         except Exception as e:
             status = { "status": "EXCEPTION", "exception": "{}".format(e) }
 
+        command.to_responsetopic(self.mqtt_client, req, status)
         msg = command.to_stdmsgs_string(json.dumps(status))
         return command.to_commandoutput(msg.data)
 

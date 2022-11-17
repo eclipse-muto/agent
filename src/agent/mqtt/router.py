@@ -48,5 +48,8 @@ class Router(object):
           mesg.method = method
           if not self.command_plugin is None:
             result = self.command_plugin.on_command_callback(mesg)
-            return result.output.payload
+            if result is not None and hasattr(result,'output'):
+              return result.output.payload
+            if result is not None and hasattr(result,'payload'):
+              return result.payload
         return "None"
