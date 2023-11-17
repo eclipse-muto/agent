@@ -1,0 +1,27 @@
+name: Colcon Build and Test
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: osrf/ros:humble-desktop
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - run: |
+          mkdir -p $(pwd)/tmp/muto/src/
+          ln -s $(pwd) $(pwd)/tmp/muto/src/agent
+          cd $(pwd)/tmp/muto
+          apt-get update -y
+          apt-get install python3-pip -y
+          pip3 install setuptools==58.2.0
+          . /opt/ros/humble/setup.sh
+          rosdep update -y
+          rosdep install --from-path src --ignore-src -r -y --rosdistro humble
+          colcon build
+          . install/setup.sh
+          # colcon test
+          # colcon test-result --all --verbose
+        name: Agent ROS2 Humble container build
