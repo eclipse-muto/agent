@@ -66,12 +66,12 @@ class NodeCommands():
         except:
             self.node.get_logger().error(f"Couldn't get the list of running nodes.")
 
-        for node_name in discovered_nodes:
+        for node in discovered_nodes:
             try:
-                info = self.get_node_info(node_name)
+                info = self.get_node_info(node)
             except:
-                self.node.get_logger().error(f"Couldn't get the information about the {node_name}.")
-            result["nodes"].append({"name": node_name, "info": info})
+                self.node.get_logger().error(f"Couldn't get the information about the {node[0]}.")
+            result["nodes"].append({"name": node[1]+"/"+node[0], "info": info})
 
 
         response.output = self.node.construct_command_output_message(result)
@@ -151,12 +151,12 @@ class NodeCommands():
         Returns:
             A list of discovered node names.
         """
-        node_list = self.node.get_node_names()
-        node_list = [x for x in node_list if not x.startswith("_")]
+        node_list = self.node.get_node_names_and_namespaces()
+        node_list = [x for x in node_list if not x[0].startswith("_")]
 
         return node_list
 
-    def get_node_info(self, node_name, name_space=""):
+    def get_node_info(self, n):
         """
         Get information about a node.
 
@@ -173,6 +173,8 @@ class NodeCommands():
             A dictionary including publishers, subscribers and services as keys
             and corresponding values as values.
         """
+        node_name = n[0]
+        name_space = n[1]
         info = {"name": node_name, "pubs": [], "subs": [], "services": []}
 
         publishers = self.node.get_publisher_names_and_types_by_node(
