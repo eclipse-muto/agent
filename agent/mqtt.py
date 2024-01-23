@@ -24,7 +24,7 @@ import json
 
 from rclpy.node import Node
 
-from muto_msgs.msg import Gateway, MutoActionMeta
+from muto_msgs.msg import Gateway, MutoActionMeta, Thing
 
 from paho.mqtt.client import Client, MQTTv5
 from paho.mqtt.properties import Properties
@@ -47,6 +47,8 @@ class MQTT(Node):
         self.declare_parameter("agent_to_gateway_topic", "msg1")
         self.declare_parameter("gateway_to_agent_topic", "msg2")
 
+        self.declare_parameter("thing_messages_topic", "thing_messages")
+
         # Initialize Parameters
         self.host = self.get_parameter("host").value
         self.port = self.get_parameter("port").value
@@ -59,6 +61,8 @@ class MQTT(Node):
 
         self.agent_to_gateway_topic = self.get_parameter("agent_to_gateway_topic").value
         self.gateway_to_agent_topic = self.get_parameter("gateway_to_agent_topic").value
+
+        self.thing_messages_topic = self.get_parameter("thing_messages_topic").value
 
         # MQTT Client
         self.mqtt = Client(
@@ -82,6 +86,7 @@ class MQTT(Node):
         self.pub_agent = self.create_publisher(Gateway, self.gateway_to_agent_topic, 10)
         self.sub_agent = self.create_subscription(Gateway, self.agent_to_gateway_topic, self.agent_msg_callback, 10)
 
+        self.pub_thing = self.create_publisher(Thing, self.thing_messages_topic, 10)
 
     def __del__(self):
         self.mqtt.loop_stop()
@@ -147,24 +152,28 @@ class MQTT(Node):
         CorrelationData = None
         meta = MutoActionMeta()
 
-        if hasattr(properties, "ResponseTopic") and hasattr(properties, "CorrelationData"):
-            ResponseTopic = properties.ResponseTopic
-            CorrelationData = properties.CorrelationData.decode("utf-8")
-
-            meta.response_topic = ResponseTopic
-            meta.correlation_data = CorrelationData
+        if hasattr(properties, "ResponseTopic"):
+            meta.response_topic = properties.ResponseTopic
+        if hasattr(properties, "CorrelationData"):
+            meta.correlation_data = properties.CorrelationData.decode("utf-8")
 
         # Send message to agent
         thingmsg = json.loads(payload)
         twinmsg = []
-        if bool(thingmsg.get('topic', None)):
-            twinmsg  = re.findall('.*/things/twin/events/(.*)', thingmsg['topic'])
+        livemsg = []
+
+        if bool(thingmsg.get("topic", None)):
+            twinmsg  = re.findall(".*/things/twin/events/(.*)", thingmsg["topic"])
+            livemsg  = re.findall(".*/things/live/(.*)", thingmsg["topic"])
+
         if len(twinmsg) > 0 and bool(twinmsg[0]):
-            change = twinmsg[0]
-            logmsg = f"{self.name} received event {topic} {thingmsg['topic']} {change} {thingmsg.get('path', None)}  {thingmsg.get('value',None)}"
-            self.get_logger().info(logmsg)
+            action = twinmsg[0]
+            self.publish_thing_message(thingmsg, "twin", action, meta)
+        elif len(livemsg) > 0 and bool(livemsg[0]):
+            action = livemsg[0]
+            self.publish_thing_message(thingmsg, "live", action, meta)
         else:
-            self.send_to_agent(topic, payload, meta)
+            self.send_to_agent(topic, payload)
 
     def send_to_agent(self, topic, payload, meta):
         """
@@ -200,6 +209,21 @@ class MQTT(Node):
 
         self.mqtt.publish(response_topic, payload, properties=properties)
 
+    def publish_thing_message(self, payload, channel, action, meta):
+        """
+        TODO: add docs.
+        """
+
+        msg_thing = Thing()
+        msg_thing.topic = json.dumps(payload.get("topic", None))
+        msg_thing.headers = json.dumps(payload.get("headers", None))
+        msg_thing.path = json.dumps(payload.get("path", None))
+        msg_thing.value = json.dumps(payload.get("value", None))
+        msg_thing.channel = str(channel)
+        msg_thing.action = str(action)
+        msg_thing.meta = meta
+        
+        self.pub_thing.publish(msg_thing)
 
 def main():
     rclpy.init()
