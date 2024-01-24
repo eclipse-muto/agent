@@ -43,6 +43,7 @@ mqtt_gateway:
     keep_alive: 60
     user: null
     password: null
+    prefix: muto
     namespace: org.eclipse.muto.sandbox
     name: f1tenth-01
 
