@@ -219,6 +219,7 @@ class MQTT(Node):
         headers = payload.get("headers", None)
         if headers:
             thing_headers.reply_to = headers.get("reply-to", "")
+            thing_headers.correlation_id = headers.get("correlation-id", "")
             thing_headers.ditto_originator = headers.get("ditto-originator", "")
             thing_headers.response_required = headers.get("response-required", "")
             thing_headers.content_type = headers.get("content-type", "")
