@@ -158,7 +158,10 @@ class MQTT(Node):
         thingmsg = json.loads(payload)
         
         try:
-            parsed  = re.findall(".*/things/([^/]*)/([^/]*)/(.*)", thingmsg["topic"])[0]
+            try:
+                parsed  = re.findall(".*/things/([^/]*)/([^/]*)/(.*)", thingmsg["topic"])[0]
+            except:
+                self.send_error_message(thingmsg, meta)
         
             if len(parsed) > 2 and bool(parsed[0]):
                 channel = parsed[0]
@@ -169,9 +172,7 @@ class MQTT(Node):
                 else:
                     self.publish_thing_message(thingmsg, channel, action[0], meta)
             else:
-                self.get_logger().info(f"ERROR: incompatible type")
-                # TODO: implement
- 
+                self.send_error_message(thingmsg, meta)
         except:
             # TODO: remove this after making changes to the dashboard
             self.send_to_agent(topic, payload, meta)
@@ -221,7 +222,7 @@ class MQTT(Node):
             thing_headers.reply_to = headers.get("reply-to", "")
             thing_headers.correlation_id = headers.get("correlation-id", "")
             thing_headers.ditto_originator = headers.get("ditto-originator", "")
-            thing_headers.response_required = headers.get("response-required", "")
+            thing_headers.response_required = headers.get("response-required", False)
             thing_headers.content_type = headers.get("content-type", "")
 
         msg_thing = Thing()
@@ -234,6 +235,27 @@ class MQTT(Node):
         msg_thing.meta = meta
         
         self.pub_thing.publish(msg_thing)
+    
+    def send_error_message(self, thingmsg, meta):
+        payload = json.dumps({
+                "topic": f"{self.namespace}/{self.name}/things/twin/errors",
+                "headers": {},
+                "path": "/",
+                "value": {
+                    "status": 400,
+                    "error": "messages:unknown.topicpath",
+                    "message": f"The topic path {thingmsg.get('topic', '')} is not supported.",
+                    "description": ""
+                },
+                "status": 400
+            })
+        response_topic = meta.response_topic
+        correlation_data = meta.correlation_data
+
+        properties = Properties(PacketTypes.PUBLISH)
+        properties.CorrelationData = correlation_data.encode()
+
+        self.mqtt.publish(response_topic, payload, properties=properties)
 
 def main():
     rclpy.init()
