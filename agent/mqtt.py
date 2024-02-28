@@ -147,21 +147,28 @@ class MQTT(Node):
         mid = message.mid
         properties = message.properties
 
+        thing_message = json.loads(payload)
+        thing_message_topic = thing_message.get("topic", None)
+        thing_message_headers = thing_message.get("headers", None)
+        thing_message_path = thing_message.get("path", None)
+        thing_message_value = thing_message.get("value", None)
+
         # Create "meta" if ResponseTopic and CorrelationData exists in message properties
         meta = MutoActionMeta()
-
-        if hasattr(properties, "ResponseTopic"):
-            meta.response_topic = properties.ResponseTopic
-        if hasattr(properties, "CorrelationData"):
-            meta.correlation_data = properties.CorrelationData.decode("utf-8")
-
-        thingmsg = json.loads(payload)
         
+        if thing_message_headers:
+            meta.response_topic = thing_message_headers.get("response-topic", "")
+            meta.correlation_data = thing_message_headers.get("correlation-data", "")
+
         try:
             try:
-                parsed  = re.findall(".*/things/([^/]*)/([^/]*)/(.*)", thingmsg["topic"])[0]
-            except:
-                self.send_error_message(thingmsg, meta)
+                if "things/twin/errors" in thing_message_topic:
+                    self.get_logger().info("error message received")
+                else:
+                    parsed  = re.findall(".*/things/([^/]*)/([^/]*)/(.*)", thing_message_topic)[0]
+            except Exception as e:
+                self.get_logger().error(e)
+                self.send_error_message(thing_message, meta)
         
             if len(parsed) > 2 and bool(parsed[0]):
                 channel = parsed[0]
@@ -170,12 +177,24 @@ class MQTT(Node):
                 if (channel == "live") and (criterion == "messages") and (action[0] == "agent"):
                     self.send_to_agent(topic, payload, meta)
                 else:
-                    self.publish_thing_message(thingmsg, channel, action[0], meta)
+                    self.publish_thing_message(thing_message, channel, action[0], meta)
             else:
-                self.send_error_message(thingmsg, meta)
+                pass
+                # self.send_error_message(thing_message, meta)
         except:
-            # TODO: remove this after making changes to the dashboard
-            self.send_to_agent(topic, payload, meta)
+            pass
+            # self.send_error_message(thing_message, meta)
+
+    def respond_to_ping(self, payload, meta):
+        """ TODO: add docs """
+        payload = json.dumps({})
+        response_topic = f"{self.prefix}/{self.namespace}:{self.name}"
+        correlation_data = meta.correlation_data
+
+        properties = Properties(PacketTypes.PUBLISH)
+        properties.CorrelationData = correlation_data.encode()
+
+        self.mqtt.publish(response_topic, payload, properties=properties)
 
     def send_to_agent(self, topic, payload, meta):
         """
@@ -236,26 +255,25 @@ class MQTT(Node):
         
         self.pub_thing.publish(msg_thing)
     
-    def send_error_message(self, thingmsg, meta):
+    def send_error_message(self, thing_message, meta):
         payload = json.dumps({
                 "topic": f"{self.namespace}/{self.name}/things/twin/errors",
-                "headers": {},
+                "headers": {
+                    "correlation-id": meta.correlation_data
+                },
                 "path": "/",
                 "value": {
                     "status": 400,
                     "error": "messages:unknown.topicpath",
-                    "message": f"The topic path {thingmsg.get('topic', '')} is not supported.",
+                    "message": f"The topic path {thing_message.get('topic', '')} is not supported.",
                     "description": ""
                 },
                 "status": 400
             })
-        response_topic = meta.response_topic
-        correlation_data = meta.correlation_data
 
-        properties = Properties(PacketTypes.PUBLISH)
-        properties.CorrelationData = correlation_data.encode()
+        response_topic = f"{self.prefix}/{self.namespace}:{self.name}"
 
-        self.mqtt.publish(response_topic, payload, properties=properties)
+        self.mqtt.publish(response_topic, payload, properties=Properties(PacketTypes.PUBLISH))
 
 def main():
     rclpy.init()
