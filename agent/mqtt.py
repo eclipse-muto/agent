@@ -34,6 +34,7 @@ class MQTT(Node):
 
     def __init__(self):
         super().__init__("mqtt_gateway")
+
         # Declare Parameters
         self.declare_parameter("host", "sandbox.composiv.ai")
         self.declare_parameter("port", 1883)
@@ -87,6 +88,9 @@ class MQTT(Node):
         self.sub_agent = self.create_subscription(Gateway, self.agent_to_gateway_topic, self.agent_msg_callback, 10)
 
         self.pub_thing = self.create_publisher(Thing, self.thing_messages_topic, 10)
+        
+        # Other
+        self.twin_topic = f"{self.prefix}/{self.namespace}:{self.name}"
 
     def __del__(self):
         self.mqtt.loop_stop()
@@ -114,11 +118,8 @@ class MQTT(Node):
                 The MQTT v5.0 properties returned from the broker. An instance
                 of the Properties class.
         """
-        topic = f"{self.namespace}:{self.name}/#"
-        twintopics = f"{self.prefix}/{self.namespace}:{self.name}/#"
-        self.mqtt.subscribe(topic)
-        self.mqtt.subscribe(twintopics)
-        self.get_logger().info(f"Subscribed to {topic}")
+        self.mqtt.subscribe(self.twin_topic)
+        self.get_logger().info(f"Subscribed to {self.twin_topic}")
 
     def on_message(self, client, userdata, message):
         """
@@ -153,7 +154,7 @@ class MQTT(Node):
         thing_message_path = thing_message.get("path", None)
         thing_message_value = thing_message.get("value", None)
 
-        # Create "meta" if ResponseTopic and CorrelationData exists in message properties
+        # TODO (alpsarica): update this comment. Create "meta" if ResponseTopic and CorrelationData exists in message properties
         meta = MutoActionMeta()
         
         if thing_message_headers:
@@ -175,13 +176,16 @@ class MQTT(Node):
                 criterion = parsed[1]
                 action = parsed[2].split('/')
                 if (channel == "live") and (criterion == "messages") and (action[0] == "agent"):
-                    self.send_to_agent(topic, payload, meta)
+                    if thing_message_path.startswith("/inbox"):
+                        self.send_to_agent(thing_message, meta)
+                    else:
+                        pass
                 else:
                     self.publish_thing_message(thing_message, channel, action[0], meta)
             else:
                 pass
                 # self.send_error_message(thing_message, meta)
-        except:
+        except Exception as e:
             pass
             # self.send_error_message(thing_message, meta)
 
@@ -196,7 +200,7 @@ class MQTT(Node):
 
         self.mqtt.publish(response_topic, payload, properties=properties)
 
-    def send_to_agent(self, topic, payload, meta):
+    def send_to_agent(self, thing_message, meta):
         """
         Construct and publish Muto Gateway message.
 
@@ -206,8 +210,8 @@ class MQTT(Node):
             meta: Meta string.
         """
         msg = Gateway()
-        msg.topic = topic
-        msg.payload = payload
+        msg.topic = thing_message.get("topic", "")
+        msg.payload = json.dumps(thing_message)
         msg.meta = meta
         
         self.pub_agent.publish(msg)
@@ -222,13 +226,12 @@ class MQTT(Node):
             data: Gateway message.
         """
         payload = data.payload
-        response_topic = data.meta.response_topic
         correlation_data = data.meta.correlation_data
 
         properties = Properties(PacketTypes.PUBLISH)
         properties.CorrelationData = correlation_data.encode()
 
-        self.mqtt.publish(response_topic, payload, properties=properties)
+        self.mqtt.publish(self.twin_topic, payload, properties=properties)
 
     def publish_thing_message(self, payload, channel, action, meta):
         """
