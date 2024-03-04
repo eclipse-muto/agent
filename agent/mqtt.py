@@ -158,8 +158,8 @@ class MQTT(Node):
         meta = MutoActionMeta()
         
         if thing_message_headers:
-            meta.response_topic = thing_message_headers.get("response-topic", "")
-            meta.correlation_data = thing_message_headers.get("correlation-data", "")
+            meta.response_topic = thing_message_headers.get("reply-to", "")
+            meta.correlation_data = thing_message_headers.get("correlation-id", "")
 
         try:
             try:
@@ -189,17 +189,6 @@ class MQTT(Node):
             pass
             # self.send_error_message(thing_message, meta)
 
-    def respond_to_ping(self, payload, meta):
-        """ TODO: add docs """
-        payload = json.dumps({})
-        response_topic = f"{self.prefix}/{self.namespace}:{self.name}"
-        correlation_data = meta.correlation_data
-
-        properties = Properties(PacketTypes.PUBLISH)
-        properties.CorrelationData = correlation_data.encode()
-
-        self.mqtt.publish(response_topic, payload, properties=properties)
-
     def send_to_agent(self, thing_message, meta):
         """
         Construct and publish Muto Gateway message.
@@ -226,12 +215,13 @@ class MQTT(Node):
             data: Gateway message.
         """
         payload = data.payload
+        response_topic = data.meta.response_topic
         correlation_data = data.meta.correlation_data
 
         properties = Properties(PacketTypes.PUBLISH)
         properties.CorrelationData = correlation_data.encode()
 
-        self.mqtt.publish(self.twin_topic, payload, properties=properties)
+        self.mqtt.publish(response_topic, payload, properties=properties)
 
     def publish_thing_message(self, payload, channel, action, meta):
         """
