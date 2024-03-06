@@ -175,7 +175,11 @@ class MQTT(Node):
                 channel = parsed[0]
                 criterion = parsed[1]
                 action = parsed[2].split('/')
-                if (channel == "live") and (criterion == "messages") and (action[0] == "agent"):
+                if (
+                    (channel == "live")
+                    and (criterion == "messages")
+                    and ((action[0] == "agent") or (action[0] == "stack"))
+                ):
                     if thing_message_path.startswith("/inbox"):
                         self.send_to_agent(thing_message, meta)
                     else:
