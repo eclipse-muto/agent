@@ -149,10 +149,10 @@ class MQTT(Node):
         properties = message.properties
 
         thing_message = json.loads(payload)
-        thing_message_topic = thing_message.get("topic", None)
-        thing_message_headers = thing_message.get("headers", None)
-        thing_message_path = thing_message.get("path", None)
-        thing_message_value = thing_message.get("value", None)
+        thing_message_topic = thing_message.get("topic", "")
+        thing_message_headers = thing_message.get("headers", "")
+        thing_message_path = thing_message.get("path", "")
+        thing_message_value = thing_message.get("value", "")
 
         # TODO (alpsarica): update this comment. Create "meta" if ResponseTopic and CorrelationData exists in message properties
         meta = MutoActionMeta()
@@ -161,37 +161,41 @@ class MQTT(Node):
             meta.response_topic = thing_message_headers.get("reply-to", "")
             meta.correlation_data = thing_message_headers.get("correlation-id", "")
 
+
         try:
-            try:
-                if "things/twin/errors" in thing_message_topic:
-                    self.get_logger().info("error message received")
-                else:
-                    parsed  = re.findall(".*/things/([^/]*)/([^/]*)/(.*)", thing_message_topic)[0]
-            except Exception as e:
-                self.get_logger().error(e)
-                self.send_error_message(thing_message, meta)
-        
-            if len(parsed) > 2 and bool(parsed[0]):
-                channel = parsed[0]
-                criterion = parsed[1]
-                action = parsed[2].split('/')
-                if (
-                    (channel == "live")
-                    and (criterion == "messages")
-                    and ((action[0] == "agent") or (action[0] == "stack"))
-                ):
-                    if thing_message_path.startswith("/inbox"):
-                        self.send_to_agent(thing_message, meta)
-                    else:
-                        pass
-                else:
-                    self.publish_thing_message(thing_message, channel, action[0], meta)
+            if "things/twin/errors" in thing_message_topic:
+                self.get_logger().info("error message received")
             else:
-                pass
-                # self.send_error_message(thing_message, meta)
-        except Exception as e:
-            pass
-            # self.send_error_message(thing_message, meta)
+                parsed  = re.findall(".*/things/([^/]*)/([^/]*)/(.*)", thing_message_topic)[0]
+    
+                if len(parsed) > 2 and bool(parsed[0]):
+                    channel = parsed[0]
+                    criterion = parsed[1]
+                    action = parsed[2].split('/')
+                    if (
+                        (channel == "live")
+                        and (criterion == "messages")
+                        and ((action[0] == "agent") or (action[0] == "stack"))
+                    ):
+                        if thing_message_path.startswith("/inbox"):
+                            self.send_to_agent(thing_message, meta)
+                    else:
+                        self.publish_thing_message(thing_message, channel, action[0], meta)
+                else:
+                    self.publish_error_message(
+                        meta,
+                        status=400,
+                        error="things:topic.malfunctioned",
+                        message="Ditto Protocol message topic is malfunctioned."
+                    )
+        except Exception:
+            self.publish_error_message(
+                meta,
+                status=400,
+                error="things:ditto.unsupported",
+                message="Message is not a supported Ditto Protocol message."
+            )
+
 
     def send_to_agent(self, thing_message, meta):
         """
@@ -252,7 +256,7 @@ class MQTT(Node):
         
         self.pub_thing.publish(msg_thing)
     
-    def send_error_message(self, thing_message, meta):
+    def publish_error_message(self, meta, status=400, error="", message="", description=""):
         payload = json.dumps({
                 "topic": f"{self.namespace}/{self.name}/things/twin/errors",
                 "headers": {
@@ -260,17 +264,21 @@ class MQTT(Node):
                 },
                 "path": "/",
                 "value": {
-                    "status": 400,
-                    "error": "messages:unknown.topicpath",
-                    "message": f"The topic path {thing_message.get('topic', '')} is not supported.",
-                    "description": ""
+                    "status": status,
+                    "error": error,
+                    "message": message,
+                    "description": description
                 },
-                "status": 400
+                "status": status
             })
 
         response_topic = f"{self.prefix}/{self.namespace}:{self.name}"
+        correlation_data = meta.correlation_data
 
-        self.mqtt.publish(response_topic, payload, properties=Properties(PacketTypes.PUBLISH))
+        properties = Properties(PacketTypes.PUBLISH)
+        properties.CorrelationData = correlation_data.encode()
+
+        self.mqtt.publish(response_topic, payload, properties=properties)
 
 def main():
     rclpy.init()
