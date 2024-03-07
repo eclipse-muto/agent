@@ -78,6 +78,7 @@ class Command():
         command_input.payload = payload
 
         self.req.input = command_input
+        self.payload = payload
         self.meta = meta
 
         if self.client.service_is_ready():
@@ -104,7 +105,7 @@ class Command():
         except Exception as e:
             self.node.get_logger().error(f"Service call failed: {e}")
         
-        self.node.publish_executed_command_result(result, self.meta)
+        self.node.publish_executed_command_result(result, self.payload, self.meta)
 
 
 class ROSCommandsPlugin(Node):
@@ -218,7 +219,7 @@ class ROSCommandsPlugin(Node):
         except Exception as e:
             self.get_logger().error(f"{e}")
 
-    def publish_executed_command_result(self, result, meta):
+    def publish_executed_command_result(self, result, payload, meta):
         """
         Publish the executed command result to the agent.
 
@@ -230,12 +231,14 @@ class ROSCommandsPlugin(Node):
             result: The result object containing the executed command result.
             meta: The MutoActionMeta message associated with the command.
         """
-        payload = result.output.payload
+        payload = json.loads(payload)
+        payload["value"] = result.output.payload
+        payload["path"] = payload["path"].replace("/inbox", "/outbox")
 
         msg_action = MutoAction()
         msg_action.context = ""
         msg_action.method = ""
-        msg_action.payload = payload
+        msg_action.payload = json.dumps(payload)
         msg_action.meta = meta
 
         self.pub_agent.publish(msg_action)

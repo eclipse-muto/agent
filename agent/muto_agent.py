@@ -73,10 +73,27 @@ class MutoAgent(Node):
         type_, method = self.parse_topic(topic)
 
         # According to the request type, run the relevant method
-        if type_ == "stack":
+        if type_ == "ping":
+            self.respond_to_ping(payload, meta)
+        elif type_ == "stack":
             self.send_to_composer(payload, meta, method)
-        if type_ == "agent":
+        elif type_ == "agent":
             self.send_to_commands_plugin(payload, meta, method)
+
+    def respond_to_ping(self, payload, meta):
+        """
+        Respond to vehicle ping message.
+
+        Args:
+            payload: Payload from the gateway message.
+            meta: Meta from the gateway message.
+        """
+        msg = Gateway()
+        msg.topic = ""
+        msg.payload = payload.replace("/inbox", "/outbox")
+        msg.meta = meta
+
+        self.pub_gateway.publish(msg)
 
     def composer_msg_callback(self, data):
         """TODO add docs."""
@@ -116,6 +133,8 @@ class MutoAgent(Node):
         try:
             if "telemetry" in topic:
                 type_, method = None, None
+            elif "ping" in topic:
+                type_, method = "ping", None
             elif "stack" in topic:
                 method = re.findall('.*/stack/commands/(.*)', topic)
                 type_, method = "stack", method[0]
