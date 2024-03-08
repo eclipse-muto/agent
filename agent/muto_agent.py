@@ -63,7 +63,14 @@ class MutoAgent(Node):
         self.pub_commands = self.create_publisher(MutoAction, self.agent_to_commands_topic, 10)
 
     def gateway_msg_callback(self, data):
-        """TODO add docs."""
+        """
+        Callback function of gateway subscriber.
+
+        Routes messages received from gateway to the respective module.
+        
+        Args:
+            data: Gateway message.
+        """
         # Parse Data
         topic = data.topic
         payload = data.payload

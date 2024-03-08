@@ -155,7 +155,6 @@ class MQTT(Node):
         thing_message_path = thing_message.get("path", "")
         thing_message_value = thing_message.get("value", "")
 
-        # TODO (alpsarica): update this comment. Create "meta" if ResponseTopic and CorrelationData exists in message properties
         meta = MutoActionMeta()
         
         if thing_message_headers:
@@ -234,7 +233,19 @@ class MQTT(Node):
 
     def publish_thing_message(self, payload, channel, action, meta):
         """
-        TODO: add docs.
+        Construct and publish Ditto event messages.
+
+        Args:
+            payload:
+                Ditto Protocol message.
+            channel:
+                Whether the Protocol message is addressed to the digital twin,
+                to the actual live device or to none of both. Usually "thing".
+            action:
+                Keyword for further distinguishing the purpose of a Protocol
+                message.
+            meta:
+                Meta string.
         """
         thing_headers = ThingHeaders()
 
@@ -258,6 +269,25 @@ class MQTT(Node):
         self.pub_thing.publish(msg_thing)
     
     def publish_error_message(self, meta, status=400, error="", message="", description=""):
+        """
+        Construct and publish Ditto error messages.
+
+        Args:
+            meta:
+                Meta string.
+            status:
+                The status code that indicates the result of the command. The
+                semantics of the used status codes are based on the HTTP status
+                codes.
+            error:
+                The error code or identifier that uniquely identifies the error.
+            message:
+                The human readable message that explains what went wrong during
+                the execution of a command/message.
+            description:
+                Contains further information about the error e.g. a hint what
+                caused the problem and how to solve it.
+        """
         payload = json.dumps({
                 "topic": f"{self.namespace}/{self.name}/things/twin/errors",
                 "headers": {

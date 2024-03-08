@@ -244,6 +244,17 @@ class ROSCommandsPlugin(Node):
         self.pub_agent.publish(msg_action)
     
     def publish_telemetry(self, telemetry_data, meta):
+        """
+        Publish telemetry to the agent.
+
+        This method publishes telemetry to the agent by constructing a MutoAction
+        message with the specified telemetry payload and meta data. The message
+        is then published using the agent publisher.
+
+        Args:
+            telemetry_data: Telemetry data.
+            meta: The MutoActionMeta message associated with the command.
+        """
         msg_telemetry_data_meta = MutoActionMeta()
         msg_telemetry_data_meta.response_topic = meta["topic"]
         msg_telemetry_data_meta.correlation_data = meta["correlation"]
@@ -257,6 +268,13 @@ class ROSCommandsPlugin(Node):
         self.pub_agent.publish(msg_telemetry_data)
 
     def publish_error(self, error_message, meta):
+        """
+        Publish error message to the agent.
+
+        Args:
+            error_message: Error message.
+            meta: The MutoActionMeta message associated with the command.
+        """
         msg_telemetry_data = MutoAction()
         msg_telemetry_data.context = ""
         msg_telemetry_data.method = ""
