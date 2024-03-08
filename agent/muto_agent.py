@@ -49,25 +49,39 @@ class MutoAgent(Node):
         self.agent_to_gateway_topic = self.get_parameter("agent_to_gateway_topic").value
         self.gateway_to_agent_topic = self.get_parameter("gateway_to_agent_topic").value
 
-        self.agent_to_commands_topic = self.get_parameter("agent_to_commands_topic").value
-        self.commands_to_agent_topic = self.get_parameter("commands_to_agent_topic").value
+        self.agent_to_commands_topic = self.get_parameter(
+            "agent_to_commands_topic"
+        ).value
+        self.commands_to_agent_topic = self.get_parameter(
+            "commands_to_agent_topic"
+        ).value
 
         # ROS Related
-        self.sub_gateway = self.create_subscription(Gateway, self.gateway_to_agent_topic, self.gateway_msg_callback, 10)
-        self.pub_gateway = self.create_publisher(Gateway, self.agent_to_gateway_topic, 10)
+        self.sub_gateway = self.create_subscription(
+            Gateway, self.gateway_to_agent_topic, self.gateway_msg_callback, 10
+        )
+        self.pub_gateway = self.create_publisher(
+            Gateway, self.agent_to_gateway_topic, 10
+        )
 
-        self.sub_stack = self.create_subscription(String, self.twin_topic, self.composer_msg_callback, 10)
+        self.sub_stack = self.create_subscription(
+            String, self.twin_topic, self.composer_msg_callback, 10
+        )
         self.pub_stack = self.create_publisher(MutoAction, self.stack_topic, 10)
 
-        self.sub_commands = self.create_subscription(MutoAction, self.commands_to_agent_topic, self.commands_msg_callback, 10)
-        self.pub_commands = self.create_publisher(MutoAction, self.agent_to_commands_topic, 10)
+        self.sub_commands = self.create_subscription(
+            MutoAction, self.commands_to_agent_topic, self.commands_msg_callback, 10
+        )
+        self.pub_commands = self.create_publisher(
+            MutoAction, self.agent_to_commands_topic, 10
+        )
 
     def gateway_msg_callback(self, data):
         """
         Callback function of gateway subscriber.
 
         Routes messages received from gateway to the respective module.
-        
+
         Args:
             data: Gateway message.
         """
@@ -112,7 +126,7 @@ class MutoAgent(Node):
         Callback function of commands_plugin subscriber.
 
         Routes messages received from commands_plugin to ditto gateway.
-        
+
         Args:
             data: MutoAction message.
         """
@@ -135,7 +149,7 @@ class MutoAgent(Node):
         Returns:
             A tuple (type, method), where type is either stack or agent and
             method is command to run. Will return (None, None) tuple if topic
-            doesn't involve "stack" or "agent" keywords. 
+            doesn't involve "stack" or "agent" keywords.
         """
         try:
             if "telemetry" in topic:
@@ -143,10 +157,10 @@ class MutoAgent(Node):
             elif "ping" in topic:
                 type_, method = "ping", None
             elif "stack" in topic:
-                method = re.findall('.*/stack/commands/(.*)', topic)
+                method = re.findall(".*/stack/commands/(.*)", topic)
                 type_, method = "stack", method[0]
             elif "agent" in topic:
-                method = re.findall('.*/agent/commands/(.*)', topic)
+                method = re.findall(".*/agent/commands/(.*)", topic)
                 type_, method = "agent", method[0]
             return type_, method
         except:
@@ -156,7 +170,7 @@ class MutoAgent(Node):
     def send_to_composer(self, payload, meta, method):
         """
         Send MutoAction message to composer.
-        
+
         Construct MutoActionMeta and MutoAction messages and send to
         composer.
 
@@ -177,7 +191,7 @@ class MutoAgent(Node):
     def send_to_commands_plugin(self, payload, meta, method):
         """
         Send MutoAction message to commands plugin.
-        
+
         Construct MutoActionMeta and MutoAction messages and send to
         commands plugin.
 
@@ -201,5 +215,5 @@ def main():
     rclpy.spin(agent)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
