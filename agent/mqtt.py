@@ -26,7 +26,7 @@ from rclpy.node import Node
 
 from muto_msgs.msg import Gateway, MutoActionMeta, Thing, ThingHeaders
 
-from paho.mqtt.client import Client, MQTTv5
+from paho.mqtt.client import Client, CallbackAPIVersion, MQTTv5
 from paho.mqtt.properties import Properties
 from paho.mqtt.packettypes import PacketTypes
 
@@ -67,6 +67,7 @@ class MQTT(Node):
 
         # MQTT Client
         self.mqtt = Client(
+            callback_api_version=CallbackAPIVersion.VERSION2,
             client_id=f"{self.name}_{self.get_clock().now()}",
             reconnect_on_failure=True,
             protocol=MQTTv5
