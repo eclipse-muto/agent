@@ -272,6 +272,27 @@ class MQTT(Node):
         msg_thing.meta = meta
 
         self.pub_thing.publish(msg_thing)
+    
+    def send_error_message(self, thingmsg, meta):
+        payload = json.dumps({
+                "topic": f"{self.namespace}/{self.name}/things/twin/errors",
+                "headers": {},
+                "path": "/",
+                "value": {
+                    "status": 400,
+                    "error": "messages:unknown.topicpath",
+                    "message": f"The topic path {thingmsg.get('topic', '')} is not supported.",
+                    "description": ""
+                },
+                "status": 400
+            })
+        response_topic = meta.response_topic
+        correlation_data = meta.correlation_data
+
+        properties = Properties(PacketTypes.PUBLISH)
+        properties.CorrelationData = correlation_data.encode()
+
+        self.mqtt.publish(response_topic, payload, properties=properties)
 
     def publish_error_message(
         self, meta, status=400, error="", message="", description=""
