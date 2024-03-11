@@ -29,6 +29,8 @@
     agent_to_commands_topic: "agent_to_command"
     commands_to_agent_topic: "command_to_agent"
 
+    thing_messages_topic: "thing_messages"
+
 muto_agent:
   ros__parameters:
     type: simulator
@@ -41,6 +43,7 @@ mqtt_gateway:
     keep_alive: 60
     user: null
     password: null
+    prefix: muto
     namespace: org.eclipse.muto.sandbox
     name: f1tenth-01
 

@@ -71,7 +71,11 @@ class NodeCommands():
                 info = self.get_node_info(node)
             except:
                 self.node.get_logger().error(f"Couldn't get the information about the {node[0]}.")
-            result["nodes"].append({"name": node[1]+"/"+node[0], "info": info})
+
+            if node[1] == "/":
+                result["nodes"].append({"name": "/" + node[0], "info": info})
+            else:
+                result["nodes"].append({"name": node[1] + "/" + node[0], "info": info})
 
 
         response.output = self.node.construct_command_output_message(result)

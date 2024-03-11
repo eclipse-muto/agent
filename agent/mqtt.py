@@ -19,13 +19,17 @@
 #
 
 import rclpy
+import re
+import json
+
 from rclpy.node import Node
 
-from muto_msgs.msg import Gateway, MutoActionMeta
+from muto_msgs.msg import Gateway, MutoActionMeta, Thing, ThingHeaders
 
-from paho.mqtt.client import Client, MQTTv5
+from paho.mqtt.client import Client, CallbackAPIVersion, MQTTv5
 from paho.mqtt.properties import Properties
 from paho.mqtt.packettypes import PacketTypes
+
 
 class MQTT(Node):
 
@@ -39,10 +43,13 @@ class MQTT(Node):
         self.declare_parameter("user", "")
         self.declare_parameter("password", "")
         self.declare_parameter("namespace", "")
+        self.declare_parameter("prefix", "muto")
         self.declare_parameter("name", "")
 
         self.declare_parameter("agent_to_gateway_topic", "msg1")
         self.declare_parameter("gateway_to_agent_topic", "msg2")
+
+        self.declare_parameter("thing_messages_topic", "thing_messages")
 
         # Initialize Parameters
         self.host = self.get_parameter("host").value
@@ -50,17 +57,21 @@ class MQTT(Node):
         self.keep_alive = self.get_parameter("keep_alive").value
         self.user = self.get_parameter("user").value
         self.password = self.get_parameter("password").value
+        self.prefix = self.get_parameter("prefix").value
         self.namespace = self.get_parameter("namespace").value
         self.name = self.get_parameter("name").value
 
         self.agent_to_gateway_topic = self.get_parameter("agent_to_gateway_topic").value
         self.gateway_to_agent_topic = self.get_parameter("gateway_to_agent_topic").value
 
+        self.thing_messages_topic = self.get_parameter("thing_messages_topic").value
+
         # MQTT Client
         self.mqtt = Client(
+            callback_api_version=CallbackAPIVersion.VERSION2,
             client_id=f"{self.name}_{self.get_clock().now()}",
             reconnect_on_failure=True,
-            protocol=MQTTv5
+            protocol=MQTTv5,
         )
         self.mqtt.on_connect = self.on_connect
         self.mqtt.on_message = self.on_message
@@ -69,15 +80,22 @@ class MQTT(Node):
             self.mqtt.connect(self.host, self.port, self.keep_alive)
             self.get_logger().info("Connection Established!")
         except:
-            self.get_logger().warn("Connection could not be established to Twin Server!")
+            self.get_logger().warn(
+                "Connection could not be established to Twin Server!"
+            )
 
         self.mqtt.loop_start()
 
-
         # ROS Related
         self.pub_agent = self.create_publisher(Gateway, self.gateway_to_agent_topic, 10)
-        self.sub_agent = self.create_subscription(Gateway, self.agent_to_gateway_topic, self.agent_msg_callback, 10)
+        self.sub_agent = self.create_subscription(
+            Gateway, self.agent_to_gateway_topic, self.agent_msg_callback, 10
+        )
 
+        self.pub_thing = self.create_publisher(Thing, self.thing_messages_topic, 10)
+
+        # Other
+        self.twin_topic = f"{self.prefix}/{self.namespace}:{self.name}"
 
     def __del__(self):
         self.mqtt.loop_stop()
@@ -90,7 +108,7 @@ class MQTT(Node):
         This method runs everytime there is a new connection. Since subscribing
         occurs here, even if we lose connection and reconnect, subscription
         will be renewed.
-            
+
         Args:
             client:
                 The client instance for this callback
@@ -105,9 +123,8 @@ class MQTT(Node):
                 The MQTT v5.0 properties returned from the broker. An instance
                 of the Properties class.
         """
-        topic = f"{self.namespace}:{self.name}/#"
-        self.mqtt.subscribe(topic)
-        self.get_logger().info(f"Subscribed to {topic}")
+        self.mqtt.subscribe(self.twin_topic)
+        self.get_logger().info(f"Subscribed to {self.twin_topic}")
 
     def on_message(self, client, userdata, message):
         """
@@ -117,7 +134,6 @@ class MQTT(Node):
         message. Creates a dict name "meta" if there is ResponseTopic and
         CorrelationData in message properties. Sends processed "message
         topic", "message payload" and "meta" to agent.
-        
 
         Args:
             client:
@@ -136,22 +152,57 @@ class MQTT(Node):
         mid = message.mid
         properties = message.properties
 
-        # Create "meta" if ResponseTopic and CorrelationData exists in message properties
-        ResponseTopic = None
-        CorrelationData = None
+        thing_message = json.loads(payload)
+        thing_message_topic = thing_message.get("topic", "")
+        thing_message_headers = thing_message.get("headers", "")
+        thing_message_path = thing_message.get("path", "")
+        thing_message_value = thing_message.get("value", "")
+
         meta = MutoActionMeta()
 
-        if hasattr(properties, "ResponseTopic") and hasattr(properties, "CorrelationData"):
-            ResponseTopic = properties.ResponseTopic
-            CorrelationData = properties.CorrelationData.decode("utf-8")
+        if thing_message_headers:
+            meta.response_topic = thing_message_headers.get("reply-to", "")
+            meta.correlation_data = thing_message_headers.get("correlation-id", "")
 
-            meta.response_topic = ResponseTopic
-            meta.correlation_data = CorrelationData
+        try:
+            if "things/twin/errors" in thing_message_topic:
+                self.get_logger().info("error message received")
+            else:
+                parsed = re.findall(
+                    ".*/things/([^/]*)/([^/]*)/(.*)", thing_message_topic
+                )[0]
 
-        # Send message to agent
-        self.send_to_agent(topic, payload, meta)
+                if len(parsed) > 2 and bool(parsed[0]):
+                    channel = parsed[0]
+                    criterion = parsed[1]
+                    action = parsed[2].split("/")
+                    if (
+                        (channel == "live")
+                        and (criterion == "messages")
+                        and ((action[0] == "agent") or (action[0] == "stack"))
+                    ):
+                        if thing_message_path.startswith("/inbox"):
+                            self.send_to_agent(thing_message, meta)
+                    else:
+                        self.publish_thing_message(
+                            thing_message, channel, action[0], meta
+                        )
+                else:
+                    self.publish_error_message(
+                        meta,
+                        status=400,
+                        error="things:topic.malfunctioned",
+                        message="Ditto Protocol message topic is malfunctioned.",
+                    )
+        except Exception:
+            self.publish_error_message(
+                meta,
+                status=400,
+                error="things:ditto.unsupported",
+                message="Message is not a supported Ditto Protocol message.",
+            )
 
-    def send_to_agent(self, topic, payload, meta):
+    def send_to_agent(self, thing_message, meta):
         """
         Construct and publish Muto Gateway message.
 
@@ -161,10 +212,10 @@ class MQTT(Node):
             meta: Meta string.
         """
         msg = Gateway()
-        msg.topic = topic
-        msg.payload = payload
+        msg.topic = thing_message.get("topic", "")
+        msg.payload = json.dumps(thing_message)
         msg.meta = meta
-        
+
         self.pub_agent.publish(msg)
 
     def agent_msg_callback(self, data):
@@ -172,13 +223,116 @@ class MQTT(Node):
         Callback function of agent subscriber.
 
         Publishes messages received from agent to ditto server.
-        
+
         Args:
             data: Gateway message.
         """
         payload = data.payload
         response_topic = data.meta.response_topic
         correlation_data = data.meta.correlation_data
+
+        properties = Properties(PacketTypes.PUBLISH)
+        properties.CorrelationData = correlation_data.encode()
+
+        self.mqtt.publish(response_topic, payload, properties=properties)
+
+    def publish_thing_message(self, payload, channel, action, meta):
+        """
+        Construct and publish Ditto event messages.
+
+        Args:
+            payload:
+                Ditto Protocol message.
+            channel:
+                Whether the Protocol message is addressed to the digital twin,
+                to the actual live device or to none of both. Usually "thing".
+            action:
+                Keyword for further distinguishing the purpose of a Protocol
+                message.
+            meta:
+                Meta string.
+        """
+        thing_headers = ThingHeaders()
+
+        headers = payload.get("headers", None)
+        if headers:
+            thing_headers.reply_to = headers.get("reply-to", "")
+            thing_headers.correlation_id = headers.get("correlation-id", "")
+            thing_headers.ditto_originator = headers.get("ditto-originator", "")
+            thing_headers.response_required = headers.get("response-required", False)
+            thing_headers.content_type = headers.get("content-type", "")
+
+        msg_thing = Thing()
+        msg_thing.topic = payload.get("topic", "")
+        msg_thing.headers = thing_headers
+        msg_thing.path = payload.get("path", "")
+        msg_thing.value = json.dumps(payload.get("value", ""))
+        msg_thing.channel = channel
+        msg_thing.action = action
+        msg_thing.meta = meta
+
+        self.pub_thing.publish(msg_thing)
+    
+    def send_error_message(self, thingmsg, meta):
+        payload = json.dumps({
+                "topic": f"{self.namespace}/{self.name}/things/twin/errors",
+                "headers": {},
+                "path": "/",
+                "value": {
+                    "status": 400,
+                    "error": "messages:unknown.topicpath",
+                    "message": f"The topic path {thingmsg.get('topic', '')} is not supported.",
+                    "description": ""
+                },
+                "status": 400
+            })
+        response_topic = meta.response_topic
+        correlation_data = meta.correlation_data
+
+        properties = Properties(PacketTypes.PUBLISH)
+        properties.CorrelationData = correlation_data.encode()
+
+        self.mqtt.publish(response_topic, payload, properties=properties)
+
+    def publish_error_message(
+        self, meta, status=400, error="", message="", description=""
+    ):
+        """
+        Construct and publish Ditto error messages.
+
+        Args:
+            meta:
+                Meta string.
+            status:
+                The status code that indicates the result of the command. The
+                semantics of the used status codes are based on the HTTP status
+                codes.
+            error:
+                The error code or identifier that uniquely identifies the error.
+            message:
+                The human readable message that explains what went wrong during
+                the execution of a command/message.
+            description:
+                Contains further information about the error e.g. a hint what
+                caused the problem and how to solve it.
+        """
+        payload = json.dumps(
+            {
+                "topic": f"{self.namespace}/{self.name}/things/twin/errors",
+                "headers": {"correlation-id": meta.correlation_data},
+                "path": "/",
+                "value": {
+                    "status": status,
+                    "error": error,
+                    "message": message,
+                    "description": description,
+                },
+                "status": status,
+            }
+        )
+
+        response_topic = f"{self.prefix}/{self.namespace}:{self.name}"
+        correlation_data = meta.correlation_data
 
         properties = Properties(PacketTypes.PUBLISH)
         properties.CorrelationData = correlation_data.encode()
@@ -192,5 +346,5 @@ def main():
     rclpy.spin(mqtt)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -21,7 +21,13 @@
 import rclpy
 from rclpy.node import Node
 
-from muto_msgs.msg import MutoAction, MutoActionMeta, CommandInput, CommandOutput, PluginResponse
+from muto_msgs.msg import (
+    MutoAction,
+    MutoActionMeta,
+    CommandInput,
+    CommandOutput,
+    PluginResponse,
+)
 from muto_msgs.srv import CommandPlugin
 
 from agent.ros.node_commands import NodeCommands
@@ -31,12 +37,10 @@ from agent.ros.param_commands import ParamCommands
 import json
 
 
-PLUGINS = {
-    "CommandPlugin": CommandPlugin
-}
+PLUGINS = {"CommandPlugin": CommandPlugin}
 
 
-class Command():
+class Command:
     """
     Class for executing commands.
 
@@ -69,7 +73,7 @@ class Command():
             payload: Payload of the command.
             meta: MutoActionMeta object which holds information about response
                 topic.
-        
+
         Returns:
             None if service is not found.
         """
@@ -78,6 +82,7 @@ class Command():
         command_input.payload = payload
 
         self.req.input = command_input
+        self.payload = payload
         self.meta = meta
 
         if self.client.service_is_ready():
@@ -103,8 +108,8 @@ class Command():
             result = future.result()
         except Exception as e:
             self.node.get_logger().error(f"Service call failed: {e}")
-        
-        self.node.publish_executed_command_result(result, self.meta)
+
+        self.node.publish_executed_command_result(result, self.payload, self.meta)
 
 
 class ROSCommandsPlugin(Node):
@@ -129,7 +134,7 @@ class ROSCommandsPlugin(Node):
         super().__init__(
             node_name="commands_plugin",
             allow_undeclared_parameters=True,
-            automatically_declare_parameters_from_overrides=True
+            automatically_declare_parameters_from_overrides=True,
         )
 
         # Declare Parameters
@@ -140,14 +145,22 @@ class ROSCommandsPlugin(Node):
             pass
 
         # Initialize Parameters
-        self.agent_to_commands_topic = self.get_parameter("agent_to_commands_topic").value
-        self.commands_to_agent_topic = self.get_parameter("commands_to_agent_topic").value
+        self.agent_to_commands_topic = self.get_parameter(
+            "agent_to_commands_topic"
+        ).value
+        self.commands_to_agent_topic = self.get_parameter(
+            "commands_to_agent_topic"
+        ).value
 
         self.commands = self.load_commands()
 
         # ROS Related
-        self.pub_agent = self.create_publisher(MutoAction, self.commands_to_agent_topic, 10)
-        self.sub_agent = self.create_subscription(MutoAction, self.agent_to_commands_topic, self.agent_msg_callback, 10)
+        self.pub_agent = self.create_publisher(
+            MutoAction, self.commands_to_agent_topic, 10
+        )
+        self.sub_agent = self.create_subscription(
+            MutoAction, self.agent_to_commands_topic, self.agent_msg_callback, 10
+        )
 
         # Command Service Definitions
         NodeCommands(self)
@@ -168,7 +181,7 @@ class ROSCommandsPlugin(Node):
 
         if commands == {}:
             return None
-        
+
         # Create dictionary of commands
         commands_dict = {}
         for i in commands:
@@ -189,7 +202,7 @@ class ROSCommandsPlugin(Node):
             plugin = commands_dict[command]["plugin"]
 
             command_objects[name] = Command(self, service, plugin)
-        
+
         return command_objects
 
     def agent_msg_callback(self, data):
@@ -218,7 +231,7 @@ class ROSCommandsPlugin(Node):
         except Exception as e:
             self.get_logger().error(f"{e}")
 
-    def publish_executed_command_result(self, result, meta):
+    def publish_executed_command_result(self, result, payload, meta):
         """
         Publish the executed command result to the agent.
 
@@ -230,17 +243,30 @@ class ROSCommandsPlugin(Node):
             result: The result object containing the executed command result.
             meta: The MutoActionMeta message associated with the command.
         """
-        payload = result.output.payload
+        payload = json.loads(payload)
+        payload["value"] = result.output.payload
+        payload["path"] = payload["path"].replace("/inbox", "/outbox")
 
         msg_action = MutoAction()
         msg_action.context = ""
         msg_action.method = ""
-        msg_action.payload = payload
+        msg_action.payload = json.dumps(payload)
         msg_action.meta = meta
 
         self.pub_agent.publish(msg_action)
-    
+
     def publish_telemetry(self, telemetry_data, meta):
+        """
+        Publish telemetry to the agent.
+
+        This method publishes telemetry to the agent by constructing a MutoAction
+        message with the specified telemetry payload and meta data. The message
+        is then published using the agent publisher.
+
+        Args:
+            telemetry_data: Telemetry data.
+            meta: The MutoActionMeta message associated with the command.
+        """
         msg_telemetry_data_meta = MutoActionMeta()
         msg_telemetry_data_meta.response_topic = meta["topic"]
         msg_telemetry_data_meta.correlation_data = meta["correlation"]
@@ -254,6 +280,13 @@ class ROSCommandsPlugin(Node):
         self.pub_agent.publish(msg_telemetry_data)
 
     def publish_error(self, error_message, meta):
+        """
+        Publish error message to the agent.
+
+        Args:
+            error_message: Error message.
+            meta: The MutoActionMeta message associated with the command.
+        """
         msg_telemetry_data = MutoAction()
         msg_telemetry_data.context = ""
         msg_telemetry_data.method = ""
@@ -263,12 +296,8 @@ class ROSCommandsPlugin(Node):
         self.pub_agent.publish(msg_telemetry_data)
 
     def construct_command_output_message(
-            self,
-            data,
-            result_code=0,
-            err_msg="",
-            err_desc=""
-        ):
+        self, data, result_code=0, err_msg="", err_desc=""
+    ):
         """
         Constructs CommandOutput message.
 
@@ -304,5 +333,5 @@ def main():
     rclpy.spin(rsp)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
