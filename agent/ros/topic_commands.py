@@ -190,7 +190,7 @@ class TopicCommands():
 
     def callback_rostopic_echo(self, request, response):
         """ # TODO add docs."""
-        payload = json.loads(request.input.payload)
+        payload = json.loads(request.input.payload)["value"]
         ros_topic_to_echo = payload["topic"]
         action = payload["action"]
         rate = payload["rate"]

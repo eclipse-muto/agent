@@ -56,14 +56,14 @@ class ParamCommands():
         Returns:
             The modified response message object.
         """
-        # TODO Bütün nodeların parametrelerini göstersin
         result = {"params": []}
 
         parameters = self.node.get_parameters_by_prefix("")
 
         for parameter in parameters:
-            value = self.node.get_parameter(parameter).value
-            result["params"].append({"name": parameter, "value": value})
+            if not parameter.startswith("commands"):
+                value = self.node.get_parameter(parameter).value
+                result["params"].append({"name": parameter, "value": value})
 
         response.output = self.node.construct_command_output_message(result)
 
