@@ -65,6 +65,8 @@ class MQTT(Node):
         self.gateway_to_agent_topic = self.get_parameter("gateway_to_agent_topic").value
 
         self.thing_messages_topic = self.get_parameter("thing_messages_topic").value
+        
+        self.twin_topic = f"{self.prefix}/{self.namespace}:{self.name}"
 
         # MQTT Client
         self.mqtt = Client(
@@ -93,9 +95,6 @@ class MQTT(Node):
         )
 
         self.pub_thing = self.create_publisher(Thing, self.thing_messages_topic, 10)
-
-        # Other
-        self.twin_topic = f"{self.prefix}/{self.namespace}:{self.name}"
 
     def __del__(self):
         self.mqtt.loop_stop()
