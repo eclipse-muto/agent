@@ -19,9 +19,9 @@
 #
 
 import unittest
+import json
 
 import rclpy
-
 import agent.muto_agent
 from muto_msgs.msg import Gateway, MutoAction, MutoActionMeta
 
@@ -44,14 +44,64 @@ class TestAgentNode(unittest.TestCase):
     def test_mqtt_node_create(self):
         assert self.node != None, "Node couldn't be created."
 
-    def test_gateway_msg_callback_stack(self):
+    def test_gateway_msg_callback_ping(self):
         meta_msg = MutoActionMeta()
-        meta_msg.response_topic = "db-org.eclipse.muto.sandbox:f1tenth/agent/fa30fe44-153f-4541-b78e-3f71863a331d"
-        meta_msg.correlation_data = "fa30fe44-153f-4541-b78e-3f71863a331d"
+        meta_msg.response_topic = "muto/org.eclipse.muto.sandbox:f1tenth"
+        meta_msg.correlation_data = "7c4a0d1f-c38a-4076-b138-ac07357c1d0e"
 
         gw_msg = Gateway()
-        gw_msg.topic = "org.eclipse.muto.sandbox:f1tenth/stack/commands/apply"
-        gw_msg.payload = '{"stackId":"org.eclipse.muto.sandbox:f1tenth_melodic_base.launch","target":{"topic":"db-org.eclipse.muto.sandbox:f1tenth/agent/fed4991b-b88f-49d1-aa71-b829f0814cde","correlation":"fed4991b-b88f-49d1-aa71-b829f0814cde"}}'
+        gw_msg.topic = "org.eclipse.muto.sandbox/f1tenth/things/live/messages/agent/commands/ping"
+        gw_msg.payload = json.dumps(
+            {
+                "topic": "org.eclipse.muto.sandbox/f1tenth/things/live/messages/agent/commands/ping",
+                "headers": {
+                    "content-type": "application/json",
+                    "reply-to": "muto/org.eclipse.muto.sandbox:f1tenth",
+                    "correlation-id": "7c4a0d1f-c38a-4076-b138-ac07357c1d0e"
+                },
+                "path": "/inbox/messages/agent/commands/ping",
+                "value": {}
+            }
+        )
+        gw_msg.meta = meta_msg
+
+        self.node.received_message = None
+        self.node.create_subscription(
+            Gateway,
+            self.node.get_parameter("agent_to_gateway_topic").value,
+            lambda msg: setattr(self.node, "received_message", msg),
+            10
+        )
+
+        self.node.gateway_msg_callback(gw_msg)
+
+        rclpy.spin_once(self.node, timeout_sec=3)
+
+        assert type(self.node.received_message) == Gateway
+        assert self.node.received_message.topic == ""
+        assert self.node.received_message.payload == gw_msg.payload.replace("/inbox", "/outbox")
+        assert self.node.received_message.meta == meta_msg
+
+    def test_gateway_msg_callback_stack(self):
+        meta_msg = MutoActionMeta()
+        meta_msg.response_topic = "muto/org.eclipse.muto.sandbox:alp-001"
+        meta_msg.correlation_data = "082e0be4-83f3-4a71-a287-aa242ef3bc91"
+
+        gw_msg = Gateway()
+        gw_msg.topic = "org.eclipse.muto.sandbox/alp-001/things/live/messages/stack/commands/kill"
+        gw_msg.payload = json.dumps(
+            {
+                "topic": "org.eclipse.muto.sandbox/alp-001/things/live/messages/stack/commands/kill",
+                "headers": {
+                    "content-type": "application/json",
+                    "reply-to": "muto/org.eclipse.muto.sandbox:alp-001",
+                    "correlation-id": "082e0be4-83f3-4a71-a287-aa242ef3bc91"
+                },
+                "path": "/inbox/messages/stack/commands/kill",
+                "value": {"stackId": "org.eclipse.muto.sandbox:composable_client_server"}
+            }
+        )
+
         gw_msg.meta = meta_msg
 
         self.node.received_message = None
@@ -68,18 +118,29 @@ class TestAgentNode(unittest.TestCase):
 
         assert type(self.node.received_message) == MutoAction
         assert self.node.received_message.context == ""
-        assert self.node.received_message.method == "apply"
+        assert self.node.received_message.method == "kill"
         assert self.node.received_message.payload == gw_msg.payload
         assert self.node.received_message.meta == meta_msg
 
     def test_gateway_msg_callback_agent(self):
         meta_msg = MutoActionMeta()
-        meta_msg.response_topic = "db-org.eclipse.muto.sandbox:f1tenth/agent/5e093972-082a-44bf-854b-96c36b3194f0"
-        meta_msg.correlation_data = "5e093972-082a-44bf-854b-96c36b3194f0"
+        meta_msg.response_topic = "muto/org.eclipse.muto.sandbox:f1tenth"
+        meta_msg.correlation_data = "494da5fa-4204-4b2e-8d10-d3138af3349a"
 
         gw_msg = Gateway()
-        gw_msg.topic = "org.eclipse.muto.sandbox:f1tenth/agent/commands/ros/node"
-        gw_msg.payload = '{"target":{"topic":"db-org.eclipse.muto.sandbox:f1tenth/agent/5e093972-082a-44bf-854b-96c36b3194f0","correlation":"5e093972-082a-44bf-854b-96c36b3194f0"}}'
+        gw_msg.topic = "org.eclipse.muto.sandbox/f1tenth/things/live/messages/agent/commands/ros/node"
+        gw_msg.payload = json.dumps(
+            {
+                "topic": "org.eclipse.muto.sandbox/f1tenth/things/live/messages/agent/commands/ros/node",
+                "headers": {
+                    "content-type": "application/json",
+                    "reply-to": "muto/org.eclipse.muto.sandbox:f1tenth",
+                    "correlation-id": "494da5fa-4204-4b2e-8d10-d3138af3349a"
+                },
+                "path": "/inbox/messages/agent/commands/ros/node",
+                "value": {}
+            }
+        )
         gw_msg.meta = meta_msg
 
         self.node.received_message = None
@@ -133,14 +194,14 @@ class TestAgentNode(unittest.TestCase):
         assert self.node.received_message.meta == meta_msg
 
     def test_parse_topic(self):
+        topic = "org.eclipse.muto.sandbox/f1tenth/things/live/messages/agent/commands/ping"
+        res = self.node.parse_topic(topic)
+        assert res == ("ping", None), "Return value must be ('ping', None)"
+        
         topic = "org.eclipse.muto.sandbox:f1tenth/stack/commands/apply"
         res = self.node.parse_topic(topic)
         assert res == ("stack", "apply"), "Return value must be ('stack', 'apply')"
         
-        topic = "org.eclipse.muto.sandbox:f1tenth/agent/commands/foo/bar"
+        topic = "org.eclipse.muto.sandbox/f1tenth/things/live/messages/agent/commands/ros/node"
         res = self.node.parse_topic(topic)
-        assert res == ("agent", "foo/bar"), "Return value must be ('agent', 'foo/bar')"
-
-        topic = "org.eclipse.muto.sandbox:/commands/foo/bar"
-        res = self.node.parse_topic(topic)
-        assert res == (None, None), "Return value must be (None, None)"
+        assert res == ("agent", "ros/node"), "Return value must be ('agent', 'ros/node')"

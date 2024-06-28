@@ -22,7 +22,6 @@ import unittest
 from unittest.mock import patch
 
 import rclpy
-from rclpy.executors import MultiThreadedExecutor
 
 import agent.commands
 from agent.ros.node_commands import NodeCommands
@@ -34,8 +33,6 @@ from muto_msgs.srv import CommandPlugin
 
 import json
 
-
-file_path = "/home/alpsarica/Desktop/muto_ros2/src/agent/config/agent.yaml"
 
 class TestCommandsPlugin(unittest.TestCase):
     @classmethod
@@ -60,7 +57,7 @@ class TestCommandsPlugin(unittest.TestCase):
     @patch("agent.commands.Command")
     def test_agent_msg_callback(self, Command):
         meta_msg = MutoActionMeta()
-        meta_msg.response_topic = "db-org.eclipse.muto.sandbox:f1tenth/agent/fa30fe44-153f-4541-b78e-3f71863a331d"
+        meta_msg.response_topic = "muto/org.eclipse.muto.sandbox:f1tenth"
         meta_msg.correlation_data = "fa30fe44-153f-4541-b78e-3f71863a331d"        
         
         action_msg = MutoAction()
@@ -77,14 +74,24 @@ class TestCommandsPlugin(unittest.TestCase):
         
         command.execute.assert_called(), "Command didn't executed."
 
-
     def test_publish_executed_command_result(self):
+        payload_msg = {
+            "topic": "org.eclipse.muto.sandbox/f1tenth/things/live/messages/agent/commands/ros/node",
+            "headers": {
+                "content-type": "application/json",
+                "reply-to": "muto/org.eclipse.muto.sandbox:f1tenth",
+                "correlation-id": "d35df8b6-030b-45eb-8a4c-c5adc9912a24"
+            },
+            "path": "/inbox/messages/agent/commands/ros/node",
+            "value": {}
+        }
+        
         meta_msg = MutoActionMeta()
-        meta_msg.response_topic = "db-org.eclipse.muto.sandbox:f1tenth/agent/fa30fe44-153f-4541-b78e-3f71863a331d"
-        meta_msg.correlation_data = "fa30fe44-153f-4541-b78e-3f71863a331d"
+        meta_msg.response_topic = "muto/org.eclipse.muto.sandbox:f1tenth"
+        meta_msg.correlation_data = "d35df8b6-030b-45eb-8a4c-c5adc9912a24"
 
-        plugin_msg = CommandPlugin.Response()
-        plugin_msg.output.payload = '{"nodes": [{"name": "muto_agent"}]}'
+        result_msg = CommandPlugin.Response()
+        result_msg.output.payload = '{"nodes": [{"name": "muto_agent"}]}'
 
         self.node.received_message = None
         self.node.create_subscription(
@@ -94,14 +101,15 @@ class TestCommandsPlugin(unittest.TestCase):
             10
         )
 
-        self.node.publish_executed_command_result(plugin_msg, meta_msg)
+        self.node.publish_executed_command_result(result_msg, json.dumps(payload_msg), meta_msg)
 
         rclpy.spin_once(self.node, timeout_sec=3)
 
         assert type(self.node.received_message) == MutoAction, "Received message has to be MutoAction type."
         assert self.node.received_message.context == ""
         assert self.node.received_message.method == ""
-        assert self.node.received_message.payload == plugin_msg.output.payload, "Payload shouldn't be changed."
+        assert json.loads(self.node.received_message.payload)["value"] == result_msg.output.payload, "Payload shouldn't be changed."
+        assert json.loads(self.node.received_message.payload)["path"] == payload_msg["path"].replace("/inbox", "/outbox"), "Payload shouldn't be changed."
         assert self.node.received_message.meta == meta_msg, "Meta shouldn't be changed."
 
     def test_construct_command_output_message(self):
@@ -179,7 +187,7 @@ class TestNodeCommands(unittest.TestCase):
         req = CommandPlugin.Request()
         res = CommandPlugin.Response()
 
-        nodes_list = ['muto_agent', 'mqtt_gateway']
+        nodes_list = [['muto_agent', "/"], ['mqtt_gateway', "/"]]
         node_info = {
             'name': 'mqtt_gateway', 
             'pubs': [
@@ -209,8 +217,8 @@ class TestNodeCommands(unittest.TestCase):
         expected_response.error_description = ""
         expected_payload = {
             "nodes": [
-                {"name": "muto_agent", "info": node_info},
-                {"name": "mqtt_gateway", "info": node_info}
+                {"name": "/muto_agent", "info": node_info},
+                {"name": "/mqtt_gateway", "info": node_info}
             ]
         }
 
@@ -251,8 +259,7 @@ class TestParamCommands(unittest.TestCase):
         expected_payload = {
             "params": [
                 {"name": "use_sim_time", "value": False},
-                {"name": "agent_to_commands_topic", "value": "msg_3"},
-                {"name": "commands_to_agent_topic", "value": "msg4"}
+                {"name": "agent_to_commands_topic", "value": "msg_3"}
             ]
         }
 
