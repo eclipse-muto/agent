@@ -1,0 +1,62 @@
+# Copyright (c) 2023-2024 Contributors to the Eclipse Foundation
+#
+# Copyright (c) 2024 Composiv.ai, Eteration A.S. and others
+#
+# All rights reserved. This program and the accompanying materials
+# are made available under the terms of the Eclipse Public License v2.0
+# and Eclipse Distribution License v1.0 which accompany this distribution.
+#
+# The Eclipse Public License is available at
+#    http://www.eclipse.org/legal/epl-v10.html
+# and the Eclipse Distribution License is available at
+#   http://www.eclipse.org/org/documents/edl-v10.php.
+#
+# Contributors:
+#    Composiv.ai, Eteration A.S. - initial API and implementation
+#
+
+name: 🛠️ Feature Request
+description: Suggest an idea to help us improve our product.
+title: "[Feature]: "
+labels:
+  - "enhancement"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Thank you :heart: for taking the time to fill out this feature request report!**
+        We kindly ask you to search if an issue already exists for your requested feature.
+
+        We are happy about contributions from all users.
+  - type: textarea
+    attributes:
+      label: Description
+      description: |
+        A clear and concise description of the feature you're interested in.
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Suggested Solution
+      description: |
+        Describe the solution you'd like to be implemented. Provide a clear and concise description of what you want to happen.
+    validations:
+      required: false
+
+  - type: textarea
+    attributes:
+      label: Alternatives
+      description: |
+        Describe alternatives you've considered.
+        A clear and concise description of alternative solutions or features you've considered.
+    validations:
+      required: false
+
+  - type: textarea
+    attributes:
+      label: Additional Context
+      description: |
+        Add any other context about the problem here.
+    validations:
+      required: false
