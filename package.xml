@@ -12,6 +12,7 @@
   <depend>rclpy</depend>
   <depend>ros2launch</depend>
   <depend>muto_msgs</depend>
+  <depend>ackermann_msgs</depend>
   <depend>python-paho-mqtt-pip</depend>
 
   <export>

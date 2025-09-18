@@ -18,6 +18,12 @@
 #
 #
 
+# Standard library imports
+import json
+import time
+from typing import Any, Dict, Type, Optional
+
+# Third-party imports
 from ackermann_msgs.msg import *
 from diagnostic_msgs.msg import *
 from geometry_msgs.msg import *
@@ -25,25 +31,43 @@ from nav_msgs.msg import *
 from sensor_msgs.msg import *
 from std_msgs.msg import *
 from tf2_msgs.msg import *
+from rclpy.node import Node
 from muto_msgs.msg import *
 from muto_msgs.srv import CommandPlugin, CoreTwin
 
-import json
-import time
-
+# Local imports
 from agent.ros.msg_converter import json_message_converter
 
 
-class TopicEcho():
-    """# TODO add docs."""
+class TopicEcho:
+    """
+    Handles topic echoing functionality for ROS 2 topics.
+    
+    This class provides functionality to subscribe to ROS topics and 
+    echo their messages at specified rates, with support for various
+    message types and conversion to JSON format.
+    
+    Args:
+        node: The ROS node instance for creating subscriptions.
+        payload: Configuration payload containing topic and rate info.
+        topic_type: The ROS message type for the topic.
+        meta: Message metadata for response handling.
+    """
 
-    def __init__(self, node, payload, topic_type, meta):
+    def __init__(
+        self, 
+        node: Node, 
+        payload: Dict[str, Any], 
+        topic_type: str, 
+        meta: Any
+    ) -> None:
         self.node = node
         
         self.payload = payload
         self.ros_topic = payload["topic"]
         self.action = payload["action"]
-        self.rate = payload["rate"]/1000 # divide by 1000 to convert ms to s
+        # Divide by 1000 to convert ms to s
+        self.rate = payload["rate"]/1000
         self.target = payload["topic"]
         self.meta = meta
         
@@ -52,7 +76,7 @@ class TopicEcho():
         self.sub = None
         self.last_send = time.time()
 
-    def convert_ros_topic_type(self, topic_type):
+    def convert_ros_topic_type(self, topic_type: str) -> Type[Any]:
         """
         Converts the ROS topic type string into its corresponding Python class.
 

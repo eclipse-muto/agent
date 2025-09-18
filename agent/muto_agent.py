@@ -18,201 +18,262 @@
 #
 #
 
-import rclpy
-from rclpy.node import Node
+"""
+Main Muto Agent module providing centralized message routing and coordination.
 
+This module implements the core Muto Agent that acts as a message router
+between different components of the system including gateways, composers,
+and command processors.
+"""
+
+# Standard library imports
+from typing import Optional, Tuple
+
+# Third-party imports
+import rclpy
 from std_msgs.msg import String
 from muto_msgs.msg import Gateway, MutoAction
 
-import re
+# Local imports
+from .interfaces import BaseNode, MessageHandler
+from .config import ConfigurationManager, AgentConfig
+from .topic_parser import MutoTopicParser
+from .message_handlers import (
+    GatewayMessageHandler, 
+    ComposerMessageHandler, 
+    CommandMessageHandler
+)
+from .exceptions import ConfigurationError, TopicParsingError
 
 
-class MutoAgent(Node):
-    """TODO add documentation."""
+class MutoAgent(BaseNode):
+    """
+    Main Muto Agent class that coordinates message routing between components.
+    
+    The MutoAgent acts as a central hub for message routing, handling communication
+    between gateways, composers, and command processors. It uses a modular design
+    with separate message handlers for different message types.
+    
+    Features:
+    - Centralized configuration management
+    - Robust error handling with specific exception types
+    - Modular message handling through dedicated handlers
+    - Proper resource management and cleanup
+    - Comprehensive logging
+    """
 
     def __init__(self):
+        """Initialize the Muto Agent."""
         super().__init__("muto_agent")
+        
+        self._config_manager: Optional[ConfigurationManager] = None
+        self._config: Optional[AgentConfig] = None
+        self._topic_parser: Optional[MutoTopicParser] = None
+        
+        # Message handlers
+        self._gateway_handler: Optional[GatewayMessageHandler] = None
+        self._composer_handler: Optional[ComposerMessageHandler] = None
+        self._command_handler: Optional[CommandMessageHandler] = None
+        
+        # Publishers and subscribers (using different names to avoid ROS conflicts)
+        self._pub_dict = {}
+        self._sub_dict = {}
 
-        # Declare Parameters
-        self.declare_parameter("stack_topic", "stack")
-        self.declare_parameter("twin_topic", "twin")
+    def _do_initialize(self) -> None:
+        """Initialize the agent components."""
+        try:
+            # Initialize configuration
+            self._config_manager = ConfigurationManager(self)
+            self._config = self._config_manager.load_config()
+            
+            # Initialize topic parser
+            self._topic_parser = MutoTopicParser(self.get_logger())
+            
+            # Initialize message handlers
+            self._initialize_message_handlers()
+            
+            # Setup ROS communication
+            self._setup_ros_communication()
+            
+        except Exception as e:
+            self.get_logger().error(f"Failed to initialize MutoAgent: {e}")
+            raise ConfigurationError(f"Agent initialization failed: {e}") from e
 
-        self.declare_parameter("agent_to_gateway_topic", "agent_to_gateway")
-        self.declare_parameter("gateway_to_agent_topic", "gateway_to_agent")
-
-        self.declare_parameter("agent_to_commands_topic", "agent_to_command")
-        self.declare_parameter("commands_to_agent_topic", "command_to_agent")
-
-        # Initialize Parameters
-        self.stack_topic = self.get_parameter("stack_topic").value
-        self.twin_topic = self.get_parameter("twin_topic").value
-        self.agent_to_gateway_topic = self.get_parameter("agent_to_gateway_topic").value
-        self.gateway_to_agent_topic = self.get_parameter("gateway_to_agent_topic").value
-
-        self.agent_to_commands_topic = self.get_parameter(
-            "agent_to_commands_topic"
-        ).value
-        self.commands_to_agent_topic = self.get_parameter(
-            "commands_to_agent_topic"
-        ).value
-
-        # ROS Related
-        self.sub_gateway = self.create_subscription(
-            Gateway, self.gateway_to_agent_topic, self.gateway_msg_callback, 10
+    def _initialize_message_handlers(self) -> None:
+        """Initialize all message handlers."""
+        self._gateway_handler = GatewayMessageHandler(
+            self, self._topic_parser, self._config.topics
         )
-        self.pub_gateway = self.create_publisher(
-            Gateway, self.agent_to_gateway_topic, 10
+        self._composer_handler = ComposerMessageHandler(
+            self, self._config.topics
+        )
+        self._command_handler = CommandMessageHandler(
+            self, self._config.topics
         )
 
-        self.sub_stack = self.create_subscription(
-            String, self.twin_topic, self.composer_msg_callback, 10
+    def _setup_ros_communication(self) -> None:
+        """Setup ROS publishers and subscribers."""
+        topics = self._config.topics
+        
+        # Setup publishers
+        self._pub_dict['gateway'] = self.create_publisher(
+            Gateway, topics.agent_to_gateway_topic, 10
         )
-        self.pub_stack = self.create_publisher(MutoAction, self.stack_topic, 10)
+        self._pub_dict['stack'] = self.create_publisher(
+            MutoAction, topics.stack_topic, 10
+        )
+        self._pub_dict['commands'] = self.create_publisher(
+            MutoAction, topics.agent_to_commands_topic, 10
+        )
+        
+        # Setup subscribers
+        self._sub_dict['gateway'] = self.create_subscription(
+            Gateway, topics.gateway_to_agent_topic, self._gateway_msg_callback, 10
+        )
+        self._sub_dict['stack'] = self.create_subscription(
+            String, topics.twin_topic, self._composer_msg_callback, 10
+        )
+        self._sub_dict['commands'] = self.create_subscription(
+            MutoAction, topics.commands_to_agent_topic, self._commands_msg_callback, 10
+        )
 
-        self.sub_commands = self.create_subscription(
-            MutoAction, self.commands_to_agent_topic, self.commands_msg_callback, 10
-        )
-        self.pub_commands = self.create_publisher(
-            MutoAction, self.agent_to_commands_topic, 10
-        )
-
-    def gateway_msg_callback(self, data):
+    def _gateway_msg_callback(self, data: Gateway) -> None:
         """
-        Callback function of gateway subscriber.
-
-        Routes messages received from gateway to the respective module.
-
+        Callback function for gateway subscriber.
+        
         Args:
             data: Gateway message.
         """
-        # Parse Data
-        topic = data.topic
-        payload = data.payload
-        meta = data.meta
+        try:
+            if self._gateway_handler:
+                self._gateway_handler.handle_message(data)
+            else:
+                self.get_logger().error("Gateway handler not initialized")
+        except Exception as e:
+            self.get_logger().error(f"Failed to process gateway message: {e}")
 
-        # Parse Topic
-        type_, method = self.parse_topic(topic)
-
-        # According to the request type, run the relevant method
-        if type_ == "ping":
-            self.respond_to_ping(payload, meta)
-        elif type_ == "stack":
-            self.send_to_composer(payload, meta, method)
-        elif type_ == "agent":
-            self.send_to_commands_plugin(payload, meta, method)
-
-    def respond_to_ping(self, payload, meta):
+    def _composer_msg_callback(self, data: String) -> None:
         """
-        Respond to vehicle ping message.
-
+        Callback function for composer subscriber.
+        
         Args:
-            payload: Payload from the gateway message.
-            meta: Meta from the gateway message.
-        """
-        msg = Gateway()
-        msg.topic = ""
-        msg.payload = payload.replace("/inbox", "/outbox")
-        msg.meta = meta
-
-        self.pub_gateway.publish(msg)
-
-    def composer_msg_callback(self, data):
-        """TODO add docs."""
-        # TODO implement
-        pass
-
-    def commands_msg_callback(self, data):
-        """
-        Callback function of commands_plugin subscriber.
-
-        Routes messages received from commands_plugin to ditto gateway.
-
-        Args:
-            data: MutoAction message.
-        """
-        msg = Gateway()
-        msg.topic = ""
-        msg.payload = data.payload
-        msg.meta = data.meta
-
-        self.pub_gateway.publish(msg)
-
-    def parse_topic(self, topic):
-        """
-        Parse topic from gateway message.
-
-        This method parses topic and detects type and method.
-
-        Args:
-            topic: Topic from gateway message.
-
-        Returns:
-            A tuple (type, method), where type is either stack or agent and
-            method is command to run. Will return (None, None) tuple if topic
-            doesn't involve "stack" or "agent" keywords.
+            data: String message from composer.
         """
         try:
-            if "telemetry" in topic:
-                type_, method = None, None
-            elif "ping" in topic:
-                type_, method = "ping", None
-            elif "stack" in topic:
-                method = re.findall(".*/stack/commands/(.*)", topic)
-                type_, method = "stack", method[0]
-            elif "agent" in topic:
-                method = re.findall(".*/agent/commands/(.*)", topic)
-                type_, method = "agent", method[0]
-            return type_, method
-        except:
-            self.get_logger().error(f"Invalid topic!")
-            return None, None
+            if self._composer_handler:
+                self._composer_handler.handle_message(data)
+            else:
+                self.get_logger().debug("Composer handler not initialized")
+        except Exception as e:
+            self.get_logger().error(f"Failed to process composer message: {e}")
 
-    def send_to_composer(self, payload, meta, method):
+    def _commands_msg_callback(self, data: MutoAction) -> None:
         """
-        Send MutoAction message to composer.
-
-        Construct MutoActionMeta and MutoAction messages and send to
-        composer.
-
+        Callback function for commands subscriber.
+        
         Args:
-            payload: Payload from the gateway message.
-            meta: Meta from the gateway message.
-            method: Method extracted from gateway message topic.
+            data: MutoAction message from commands.
         """
+        try:
+            if self._command_handler:
+                self._command_handler.handle_message(data)
+            else:
+                self.get_logger().error("Command handler not initialized")
+        except Exception as e:
+            self.get_logger().error(f"Failed to process command message: {e}")
 
-        msg_action = MutoAction()
-        msg_action.context = ""
-        msg_action.method = method
-        msg_action.payload = payload
-        msg_action.meta = meta
+    def _do_cleanup(self) -> None:
+        """Clean up agent resources."""
+        try:
+            # Clean up subscribers
+            for sub in self._sub_dict.values():
+                if sub:
+                    self.destroy_subscription(sub)
+            self._sub_dict.clear()
+            
+            # Clean up publishers
+            for pub in self._pub_dict.values():
+                if pub:
+                    self.destroy_publisher(pub)
+            self._pub_dict.clear()
+            
+            self.get_logger().info("Agent cleanup completed")
+            
+        except Exception as e:
+            self.get_logger().error(f"Error during cleanup: {e}")
 
-        self.pub_stack.publish(msg_action)
-
-    def send_to_commands_plugin(self, payload, meta, method):
+    def get_topic_parser(self) -> Optional[MutoTopicParser]:
         """
-        Send MutoAction message to commands plugin.
-
-        Construct MutoActionMeta and MutoAction messages and send to
-        commands plugin.
-
+        Get the topic parser instance.
+        
+        Returns:
+            The topic parser instance or None if not initialized.
+        """
+        return self._topic_parser
+    
+    def get_config(self) -> Optional[AgentConfig]:
+        """
+        Get the agent configuration.
+        
+        Returns:
+            The agent configuration or None if not loaded.
+        """
+        return self._config
+    
+    def parse_topic(self, topic: str) -> Tuple[Optional[str], Optional[str]]:
+        """
+        Parse topic using the topic parser.
+        
         Args:
-            payload: Payload from the gateway message.
-            meta: Meta from the gateway message.
-            method: Method extracted from gateway message topic.
+            topic: Topic string to parse.
+            
+        Returns:
+            Tuple of (type, method) or (None, None) if parsing fails.
         """
-        msg_action = MutoAction()
-        msg_action.context = ""
-        msg_action.method = method
-        msg_action.payload = payload
-        msg_action.meta = meta
-
-        self.pub_commands.publish(msg_action)
+        if self._topic_parser:
+            return self._topic_parser.parse_topic(topic)
+        return None, None
+    
+    def is_ready(self) -> bool:
+        """
+        Check if the agent is fully initialized and ready.
+        
+        Returns:
+            True if agent is ready, False otherwise.
+        """
+        return (
+            self._config is not None
+            and self._topic_parser is not None
+            and self._gateway_handler is not None
+            and self._command_handler is not None
+            and len(self._pub_dict) > 0
+            and len(self._sub_dict) > 0
+        )
 
 
 def main():
+    """Main entry point for the Muto Agent."""
     rclpy.init()
-    agent = MutoAgent()
-    rclpy.spin(agent)
+    
+    try:
+        agent = MutoAgent()
+        agent.initialize()
+        
+        if agent.is_ready():
+            agent.get_logger().info("Muto Agent started successfully")
+            rclpy.spin(agent)
+        else:
+            agent.get_logger().error("Muto Agent failed to initialize properly")
+            
+    except Exception as e:
+        print(f"Failed to start Muto Agent: {e}")
+        
+    finally:
+        try:
+            agent.cleanup()
+        except:
+            pass
+        rclpy.shutdown()
 
 
 if __name__ == "__main__":

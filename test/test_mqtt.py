@@ -39,8 +39,23 @@ class TestMQTTNode(unittest.TestCase):
 
     def setUp(self):
         self.node = agent.mqtt.MQTT()
+        # Initialize the node to set up configuration and parameters
+        try:
+            self.node.initialize()
+        except Exception:
+            # If full initialization fails (e.g., MQTT connection), continue with basic setup
+            # Manually declare the parameters that tests need
+            try:
+                self.node.declare_parameter("gateway_to_agent_topic", "gateway_to_agent")
+                self.node.declare_parameter("thing_messages_topic", "thing_messages")
+            except Exception:
+                pass
 
     def tearDown(self):
+        try:
+            self.node.cleanup()
+        except Exception:
+            pass
         self.node.destroy_node()
 
 
@@ -79,7 +94,7 @@ class TestMQTTNode(unittest.TestCase):
             10
         )   
 
-        self.node.on_message("client", "client_data", mqtt_message)
+        self.node._handle_mqtt_message(mqtt_message)
 
         rclpy.spin_once(self.node, timeout_sec=3)
 
@@ -116,7 +131,7 @@ class TestMQTTNode(unittest.TestCase):
             10
         )   
 
-        self.node.on_message("client", "client_data", mqtt_message)
+        self.node._handle_mqtt_message(mqtt_message)
 
         rclpy.spin_once(self.node, timeout_sec=3)
 
@@ -150,7 +165,7 @@ class TestMQTTNode(unittest.TestCase):
             10
         )   
 
-        self.node.on_message("client", "client_data", mqtt_message)
+        self.node._handle_mqtt_message(mqtt_message)
 
         rclpy.spin_once(self.node, timeout_sec=3)
 

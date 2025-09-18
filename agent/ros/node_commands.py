@@ -17,9 +17,13 @@
 #    Composiv.ai - initial API and implementation
 #
 #
-from muto_msgs.srv import CommandPlugin
-
+# Standard library imports
 import json
+from typing import List, Tuple, Dict, Any
+
+# Third-party imports
+from rclpy.node import Node
+from muto_msgs.srv import CommandPlugin
 
 
 class NodeCommands():
@@ -35,7 +39,7 @@ class NodeCommands():
 
     """
 
-    def __init__(self, node):
+    def __init__(self, node: Node) -> None:
         self.node = node
 
         self.rosnode_list = self.node.create_service(
@@ -45,7 +49,11 @@ class NodeCommands():
         self.rosnode_ping = self.node.create_service(
             CommandPlugin, "rosnode_ping", self.callback_rosnode_ping)
 
-    def callback_rosnode_list(self, request, response):
+    def callback_rosnode_list(
+        self, 
+        request: CommandPlugin.Request, 
+        response: CommandPlugin.Response
+    ) -> CommandPlugin.Response:
         """
         Callback function for handling rosnode_list service request.
 
@@ -63,14 +71,16 @@ class NodeCommands():
         result = {"nodes": []}
         try:
             discovered_nodes = self.get_discovered_nodes()
-        except:
-            self.node.get_logger().error(f"Couldn't get the list of running nodes.")
+        except Exception as e:
+            self.node.get_logger().error(f"Couldn't get the list of running nodes: {e}")
+            discovered_nodes = []
 
         for node in discovered_nodes:
             try:
                 info = self.get_node_info(node)
-            except:
-                self.node.get_logger().error(f"Couldn't get the information about the {node[0]}.")
+            except Exception as e:
+                self.node.get_logger().error(f"Couldn't get the information about the {node[0]}: {e}")
+                info = {}
 
             if node[1] == "/":
                 result["nodes"].append({"name": "/" + node[0], "info": info})

@@ -24,6 +24,7 @@ from unittest.mock import patch
 import rclpy
 
 import agent.commands
+from agent.command_executor import Command
 from agent.ros.node_commands import NodeCommands
 from agent.ros.topic_commands import TopicCommands
 from agent.ros.param_commands import ParamCommands
@@ -45,17 +46,31 @@ class TestCommandsPlugin(unittest.TestCase):
 
     def setUp(self):
         self.dummy_service_to_call = "rostopic_list"
-        self.dummy_plugin = "CommandPlugin"
+        self.dummy_plugin = CommandPlugin  # Use the actual service type, not string
         self.node = agent.commands.ROSCommandsPlugin()
+        # Initialize the node to set up configuration and parameters
+        try:
+            self.node.initialize()
+        except Exception:
+            # If initialization fails, manually declare parameters that tests need
+            try:
+                self.node.declare_parameter("commands_to_agent_topic", "command_to_agent")
+                self.node.declare_parameter("agent_to_commands_topic", "agent_to_command")
+            except Exception:
+                pass
 
     def tearDown(self):
+        try:
+            self.node.cleanup()
+        except Exception:
+            pass
         self.node.destroy_node()
 
     def test_commands_node_create(self):
         assert self.node != None, "Node couldn't be created."
 
     @patch("agent.commands.Command")
-    def test_agent_msg_callback(self, Command):
+    def test_agent_msg_callback(self, MockCommand):
         meta_msg = MutoActionMeta()
         meta_msg.response_topic = "muto/org.eclipse.muto.sandbox:f1tenth"
         meta_msg.correlation_data = "fa30fe44-153f-4541-b78e-3f71863a331d"        
@@ -66,13 +81,13 @@ class TestCommandsPlugin(unittest.TestCase):
         action_msg.payload = ""
         action_msg.meta = meta_msg
 
-        command = Command(self.node, self.dummy_service_to_call, self.dummy_plugin)
-
-        self.node.commands = {"ros/topic": command}
+        # Mock the command
+        mock_command = MockCommand.return_value
+        self.node.commands = {"ros/topic": mock_command}
 
         self.node.agent_msg_callback(action_msg)
         
-        command.execute.assert_called(), "Command didn't executed."
+        mock_command.execute.assert_called_once_with("ros/topic", "", meta_msg)
 
     def test_publish_executed_command_result(self):
         payload_msg = {
@@ -127,9 +142,9 @@ class TestCommand(unittest.TestCase):
 
     def setUp(self):
         self.dummy_service_to_call = "rosnode_list"
-        self.dummy_plugin = "CommandPlugin"
+        self.dummy_plugin = CommandPlugin  # Use the actual service type, not string
         self.commnands_plugin_node = agent.commands.ROSCommandsPlugin()
-        self.command = agent.commands.Command(self.commnands_plugin_node, self.dummy_service_to_call, self.dummy_plugin)
+        self.command = Command(self.commnands_plugin_node, self.dummy_service_to_call, self.dummy_plugin)
 
     def tearDown(self):
         self.commnands_plugin_node.destroy_node()

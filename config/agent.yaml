@@ -1,54 +1,27 @@
-#
-#  Copyright (c) 2023 Composiv.ai
-#
-# All rights reserved. This program and the accompanying materials
-# are made available under the terms of the Eclipse Public License v2.0
-# and Eclipse Distribution License v1.0 which accompany this distribution.
-#
-# Licensed under the  Eclipse Public License v2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-# The Eclipse Public License is available at
-#    http://www.eclipse.org/legal/epl-v20.html
-# and the Eclipse Distribution License is available at
-#   http://www.eclipse.org/org/documents/edl-v10.php.
-#
-# Contributors:
-#    Composiv.ai - initial API and implementation
-#
-#
-
 /**:
   ros__parameters:
     stack_topic: "stack"
     twin_topic: "twin"
-
     agent_to_gateway_topic: "agent_to_gateway"
     gateway_to_agent_topic: "gateway_to_agent"
-
     agent_to_commands_topic: "agent_to_command"
     commands_to_agent_topic: "command_to_agent"
-
     thing_messages_topic: "thing_messages"
+    ignored_packages: [""]
 
-muto_agent:
-  ros__parameters:
-    type: simulator
-    twin_url: "http://ditto:ditto@sandbox.composiv.ai"
 
-mqtt_gateway:
-  ros__parameters:
-    host: sandbox.composiv.ai # subject to change
+    twin_url: "https://ditto:ditto@sandbox.composiv.ai"
+    host: sandbox.composiv.ai
     port: 1883
     keep_alive: 60
     user: null
     password: null
+    anonymous: true
+    type: real_car
+    attributes: '{"brand": "muto", "model": "composer"}'
     prefix: muto
     namespace: org.eclipse.muto.sandbox
-    name: f1tenth-01
-
-commands_plugin:
-  ros__parameters:
+    name: hack2025-01
     commands:
       command1:
         name: ros/topic
