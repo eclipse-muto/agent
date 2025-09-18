@@ -261,7 +261,7 @@ class DittoMessageHandler(MessageHandler):
     
     def __init__(self, namespace: str, name: str, 
                  agent_publisher: Callable, thing_publisher: Callable,
-                 error_publisher: Callable):
+                 error_publisher: Callable, logger: Optional[Any] = None):
         """
         Initialize the Ditto message handler.
         
@@ -280,8 +280,10 @@ class DittoMessageHandler(MessageHandler):
         
         # Topic pattern for parsing things messages
         self._things_pattern = r".*/things/([^/]*)/([^/]*)/(.*)"
+        self._logger = logger
     
     def handle_message(self, message: MQTTMessage) -> None:
+        
         """
         Handle an incoming MQTT message.
         
@@ -316,10 +318,10 @@ class DittoMessageHandler(MessageHandler):
                 self._handle_things_message(thing_message, meta)
                 
         except json.JSONDecodeError as e:
-            self.get_logger().error(f"Failed to parse JSON payload: {e}")
+            self._logger.error(f"Failed to parse JSON payload: {e}")
             raise MessageParsingError(f"Invalid JSON in message: {e}") from e
         except Exception as e:
-            self.get_logger().error(f"Failed to handle MQTT message: {e}")
+            self._logger.error(f"Failed to handle MQTT message: {e}")
             raise MessageParsingError(f"Message handling failed: {e}") from e
     
     def _create_meta_from_headers(self, headers: Dict[str, Any]) -> Any:
@@ -348,7 +350,7 @@ class DittoMessageHandler(MessageHandler):
         Args:
             thing_message: The parsed thing message.
         """
-        self.get_logger().warning("Ditto error message received")
+        self._logger.warning("Ditto error message received")
         # Could be extended to handle specific error processing
     
     def _handle_things_message(self, thing_message: Dict[str, Any], meta: Any) -> None:
@@ -393,7 +395,7 @@ class DittoMessageHandler(MessageHandler):
                 )
                 
         except Exception as e:
-            self.get_logger().error(f"Error processing things message: {e}")
+            self._logger.error(f"Error processing things message: {e}")
             self._error_publisher(
                 meta,
                 status=400, 

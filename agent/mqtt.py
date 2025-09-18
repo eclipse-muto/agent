@@ -82,7 +82,8 @@ class MQTT(BaseNode):
                 self._config.mqtt.name,
                 self._send_to_agent,
                 self._publish_thing_message,
-                self._publish_error_message
+                self._publish_error_message,
+                self.get_logger()
             )
             
             # Initialize MQTT connection
