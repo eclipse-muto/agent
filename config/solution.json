@@ -1,0 +1,22 @@
+{
+    "metadata": {
+        "namespace": "default",
+        "name": "talker-listener-v-1"
+    },
+    "spec": {
+        "displayName": "talker-listener-v-1",
+        "rootResource": "talker-listener",
+        "version": "1",
+        "components": [
+            {
+                "name": "talker-listener-stack",
+                "type": "muto-agent",
+                "properties": {
+                    "type": "stack", 
+                    "content-type": "json", 
+                    "data": "jajaja"
+                }
+            }
+        ]
+    }
+}

@@ -42,7 +42,21 @@ class MQTTConfig:
     prefix: str = "muto"
     name: str = ""
 
-
+@dataclass
+class SymphonyConfig:
+    """Configuration for Symphony connection."""
+    mqtt: MQTTConfig = field(default_factory=MQTTConfig)
+    target: str = "muto-target"
+    enabled: bool = False
+    topic_prefix: str = "symphony"
+    api_url: str = "http://localhost:8082/v1alpha2/",
+    provider_name: str = "providers.target.mqtt",
+    broker_address: str = "tcp://mosquitto:1883",
+    client_id: str = "symphony",
+    request_topic: str = "coa-request",
+    response_topic: str = "coa-response",
+    timeout_seconds: int = 30,
+    auto_register: bool = False 
 @dataclass
 class TopicConfig:
     """Configuration for ROS topics."""
@@ -60,6 +74,7 @@ class AgentConfig:
     """Main configuration for the Muto Agent."""
     mqtt: MQTTConfig = field(default_factory=MQTTConfig)
     topics: TopicConfig = field(default_factory=TopicConfig)
+    symphony: SymphonyConfig = field(default_factory=SymphonyConfig)
 
 
 class ConfigurationManager:
@@ -107,6 +122,33 @@ class ConfigurationManager:
                 name=self._get_parameter("name", "")
             )
             
+            sym_mqtt_config = MQTTConfig(
+                host=self._get_parameter("symphony_host", "sandbox.composiv.ai"),
+                port=self._get_parameter("symphony_port", 1883),
+                keep_alive=self._get_parameter("symphony_keep_alive", 60),
+                user=self._get_parameter("symphony_user", ""),
+                password=self._get_parameter("symphony_password", ""),
+                namespace=self._get_parameter("symphony_namespace", ""),
+                prefix=self._get_parameter("symphony_prefix", "muto"),
+                name=self._get_parameter("symphony_name", "")
+            )
+            
+            symphony_config = SymphonyConfig(
+                mqtt=sym_mqtt_config,
+                target=self._get_parameter("symphony_target_name", "muto-target"),
+                enabled=self._get_parameter("symphony_enabled", False),
+                
+                topic_prefix=self._get_parameter("symphony_topic_prefix", "symphony"),
+                api_url=self._get_parameter("symphony_api_url", "http://localhost:8082/v1alpha2/"),
+                provider_name=self._get_parameter("symphony_provider_name", "providers.target.mqtt"),
+                broker_address=self._get_parameter("symphony_broker_address", "tcp://mosquitto:1883"),
+                client_id=self._get_parameter("symphony_client_id", "symphony"),
+                request_topic=self._get_parameter("symphony_request_topic", "coa-request"),
+                response_topic=self._get_parameter("symphony_response_topic", "coa-response"),
+                timeout_seconds=self._get_parameter("symphony_timeout_seconds", 30),
+                auto_register=self._get_parameter("symphony_auto_register", False),
+            )
+            
             # Load topic configuration
             topic_config = TopicConfig(
                 stack_topic=self._get_parameter("stack_topic", "stack"),
@@ -118,7 +160,7 @@ class ConfigurationManager:
                 thing_messages_topic=self._get_parameter("thing_messages_topic", "thing_messages")
             )
             
-            self._config = AgentConfig(mqtt=mqtt_config, topics=topic_config)
+            self._config = AgentConfig(mqtt=mqtt_config, topics=topic_config, symphony=symphony_config)
             self._validate_config()
             
             self._node.get_logger().info("Configuration loaded successfully")
@@ -154,11 +196,33 @@ class ConfigurationManager:
             ("name", ""),
             ("stack_topic", "stack"),
             ("twin_topic", "twin"),
+            
             ("agent_to_gateway_topic", "agent_to_gateway"),
             ("gateway_to_agent_topic", "gateway_to_agent"),
             ("agent_to_commands_topic", "agent_to_command"),
             ("commands_to_agent_topic", "command_to_agent"),
-            ("thing_messages_topic", "thing_messages")
+            ("thing_messages_topic", "thing_messages"),
+
+            ("symphony_enabled", False),
+            ("symphony_host", "sandbox.composiv.ai"),
+            ("symphony_port", 1883),
+            ("symphony_keep_alive", 60),
+            ("symphony_namespace", ""),
+            ("symphony_prefix", "muto"),
+            ('symphony_target_name', 'muto-device-001'),
+            ('symphony_topic_prefix', 'symphony'),
+            ('symphony_enable', False),
+            ('symphony_api_url', 'http://localhost:8082/v1alpha2/'),
+            ('symphony_user', 'admin'),
+            ('symphony_password', ''),
+            ('symphony_name', 'muto-device-001'),
+            ('symphony_provider_name', 'providers.target.mqtt'),
+            ('symphony_broker_address', 'tcp://mosquitto:1883'),
+            ('symphony_client_id', 'symphony'),
+            ('symphony_request_topic', 'coa-request'),
+            ('symphony_response_topic', 'coa-response'),
+            ('symphony_timeout_seconds', '30'),
+            ('symphony_auto_register', False),
         ]
         
         for param_name, default_value in parameters:

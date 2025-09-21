@@ -1,0 +1,34 @@
+{
+    "metadata": {
+        "name": "ankaios-target"
+    },
+    "spec": {
+        "forceRedeploy": true,
+        "components": [
+            {
+                "name": "muto",   
+                "type": "muto-agent",             
+                "properties": {          
+                }
+            }
+        ],
+        "topologies": [
+            {
+                "bindings": [
+                    {
+                        "role": "muto",
+                        "provider": "providers.target.mqtt",
+                        "config": {
+                            "name": "proxy",
+                            "brokerAddress": "tcp://mosquitto:1883",
+                            "clientID": "symphony",
+                            "requestTopic": "coa-request",
+                            "responseTopic": "coa-response",
+                            "timeoutSeconds":  "30"
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+}
