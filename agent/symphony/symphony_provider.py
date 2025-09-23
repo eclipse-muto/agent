@@ -30,7 +30,7 @@ import base64
 import json
 import signal
 import threading
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 # Third-party imports
 import rclpy
@@ -102,6 +102,8 @@ class MutoSymphonyProvider(BaseNode, SymphonyProvider):
         self.stack_publisher = self.create_publisher(
             MutoAction, topics.stack_topic, 10
         )
+
+        self._component_registry: Dict[str, Dict[str, Any]] = {}
     
 
     def _do_initialize(self) -> None:
@@ -355,59 +357,79 @@ class MutoSymphonyProvider(BaseNode, SymphonyProvider):
         )
 
         # Use summary models
-        result = SummarySpec(target_count=1, success_count=1)
+        result = SummarySpec(target_count=1)
         target_result = TargetResultSpec()
-        
-        for component in components:
-            self.logger.info(
-                f"Deploying component: {component.name} of type "
-                f"{component.type}"
-            )
-            
-            component_type = component.properties.get("type", "")
-            content_type = component.properties.get("content-type", "")
-            data = component.properties.get("data", "")
-            
-            if (component_type == "stack" and 
-                content_type == "application/json" and 
-                data):
-                try:
-                    stack_json_str = base64.b64decode(data).decode('utf-8')
-                    stack_data = json.loads(stack_json_str)
-                    self.logger.info(
-                        f"Decoded stack data for {component_type} "
-                        f"{component.name}: {stack_data}"
-                    )
-                    
-                    msg_action = MutoAction()
-                    msg_action.context = ""
-                    msg_action.method = "start"
-                    msg_action.payload = json.dumps(stack_data)
-                    self.stack_publisher.publish(msg_action)
+        successes = 0
+        failures = 0
 
-                    # Implement actual deployment logic using stack_data
-                except Exception as e:
-                    self.logger.error(
-                        f"Failed to decode or parse stack data for "
-                        f"{component_type} {component.name}: {e}"
-                    )
-                    
+        target_name = metadata.get("active-target", self.get_target_name())
+
+        for component in components:
+            component_name = component.name or "unnamed-component"
+            self.logger.info(
+                f"Deploying component: {component_name} of type {component.type}"
+            )
+
             component_result = ComponentResultSpec()
+
+            stack_payload, decode_error = self._extract_stack_payload(component)
+            if decode_error:
+                failures += 1
+                component_result.status = State.UPDATE_FAILED
+                component_result.message = decode_error
+                target_result.component_results[component_name] = component_result
+                self.logger.error(
+                    f"Component {component_name} payload error: {decode_error}"
+                )
+                continue
+
+            publish_method = self._resolve_component_method(component, default="apply")
+            published = self._publish_stack_action(
+                method=publish_method,
+                payload=stack_payload,
+                context=component.metadata.get("context", "") if component.metadata else ""
+            )
+
+            if not published:
+                failures += 1
+                component_result.status = State.MQTT_PUBLISH_FAILED
+                component_result.message = (
+                    f"Failed to publish apply action for component {component_name}"
+                )
+                target_result.component_results[component_name] = component_result
+                self.logger.error(component_result.message)
+                continue
+
+            successes += 1
             component_result.status = State.UPDATED
             component_result.message = (
-                f"Deploying component: {component.name} of type "
-                f"{component.type}"
+                f"Apply action published for component {component_name}"
             )
-            
-            target_result.component_results[component.name] = component_result
-            self.logger.info(
-                f"Deploying component: {component.name} of type "
-                f"{component.type}"
+            target_result.component_results[component_name] = component_result
+
+            self._component_registry[component_name] = {
+                "component": to_dict(component),
+                "payload": stack_payload,
+                "status": "applied",
+                "state": State.UPDATED.value,
+                "last_action": publish_method,
+            }
+
+        target_result.status = "OK" if failures == 0 else "FAILED"
+        if failures:
+            target_result.message = (
+                f"{failures} component(s) failed during apply"
             )
-        
+
+        result.success_count = successes
+        result.current_deployed = successes
+        result.planned_deployment = len(components)
+        if failures:
+            result.summary_message = target_result.message
+
         target_result.state = SummaryState.DONE
-        result.update_target_result(metadata["active-target"], target_result)
-        
+        result.update_target_result(target_name, target_result)
+
         return json.dumps(result.to_dict(), indent=2)
 
     def remove(
@@ -432,9 +454,78 @@ class MutoSymphonyProvider(BaseNode, SymphonyProvider):
             f"Symphony remove: removing {len(components)} components"
         )
         
-        results = []
-        
-        return json.dumps([to_dict(result) for result in results], indent=2)
+        result = SummarySpec(target_count=1, is_removal=True)
+        target_result = TargetResultSpec()
+        successes = 0
+        failures = 0
+        target_name = metadata.get("active-target", self.get_target_name())
+
+        for component in components:
+            component_name = component.name or "unnamed-component"
+            self.logger.info(
+                f"Removing component: {component_name} of type {component.type}"
+            )
+
+            component_result = ComponentResultSpec()
+
+            stack_payload, decode_error = self._extract_stack_payload(
+                component,
+                allow_registry_lookup=True
+            )
+
+            if decode_error:
+                failures += 1
+                component_result.status = State.DELETE_FAILED
+                component_result.message = decode_error
+                target_result.component_results[component_name] = component_result
+                self.logger.error(
+                    f"Component {component_name} payload error: {decode_error}"
+                )
+                continue
+
+            publish_method = self._resolve_component_method(component, default="kill")
+            published = self._publish_stack_action(
+                method=publish_method,
+                payload=stack_payload,
+                context=component.metadata.get("context", "") if component.metadata else ""
+            )
+
+            if not published:
+                failures += 1
+                component_result.status = State.DELETE_FAILED
+                component_result.message = (
+                    f"Failed to publish remove action for component {component_name}"
+                )
+                target_result.component_results[component_name] = component_result
+                self.logger.error(component_result.message)
+                continue
+
+            successes += 1
+            component_result.status = State.DELETED
+            component_result.message = (
+                f"Remove action published for component {component_name}"
+            )
+            target_result.component_results[component_name] = component_result
+
+            # Drop from registry once removal is confirmed
+            self._component_registry.pop(component_name, None)
+
+        target_result.status = "OK" if failures == 0 else "FAILED"
+        if failures:
+            target_result.message = (
+                f"{failures} component(s) failed during removal"
+            )
+
+        result.success_count = successes
+        if successes:
+            result.removed = True
+        if failures:
+            result.summary_message = target_result.message
+
+        target_result.state = SummaryState.DONE
+        result.update_target_result(target_name, target_result)
+
+        return json.dumps(result.to_dict(), indent=2)
 
     def get(
         self, 
@@ -458,22 +549,135 @@ class MutoSymphonyProvider(BaseNode, SymphonyProvider):
             f"Symphony get: retrieving state for {len(components)} components"
         )
         
-        # Return the requested components or empty list if none specified
-        # In a real implementation, this would query the actual system state
+        # Determine which components to include in the response
         if not components:
-            current_components = []
+            component_names = list(self._component_registry.keys())
             self.logger.info(
-                "No specific components requested, returning empty list"
+                "No specific components requested, returning tracked components"
             )
         else:
-            # Return the requested components as-is for now
-            # In real implementation, query actual deployment status
-            current_components = components
-            self.logger.info(
-                f"Returning {len(current_components)} requested components"
+            component_names = [comp.name for comp in components if comp.name]
+
+        reported_components: List[Dict[str, Any]] = []
+        for component_name in component_names:
+            state_entry = self._component_registry.get(component_name)
+            if not state_entry:
+                self.logger.debug(
+                    f"Component {component_name} not found in registry; skipping"
+                )
+                continue
+
+            component_info = dict(state_entry["component"])
+            component_info["status"] = state_entry.get("status", "unknown")
+            component_info["state"] = state_entry.get("state", State.NONE.value)
+            component_info["last_action"] = state_entry.get("last_action", "")
+            reported_components.append(component_info)
+
+        return json.dumps(reported_components, indent=2)
+
+    def _resolve_component_method(
+        self,
+        component: ComponentSpec,
+        default: str
+    ) -> str:
+        """Determine the composer method for the provided component."""
+        props = component.properties or {}
+        method = props.get("method") or props.get("action")
+
+        if not method and component.parameters:
+            method = (
+                component.parameters.get("method")
+                or component.parameters.get("action")
             )
-        
-        return [to_dict(comp) for comp in current_components]
+
+        if not method and component.metadata:
+            method = (
+                component.metadata.get("method")
+                or component.metadata.get("action")
+            )
+
+        resolved = (method or default).lower()
+
+        if default == "kill" and resolved == "start":
+            # Prevent accidental start when the default is a destructive action
+            return default
+
+        return resolved
+
+    def _extract_stack_payload(
+        self,
+        component: ComponentSpec,
+        allow_registry_lookup: bool = False
+    ) -> Tuple[Optional[Any], Optional[str]]:
+        """Extract a JSON payload representing the stack for a component."""
+        try:
+            props = component.properties or {}
+            data = props.get("data")
+
+            if data is None and allow_registry_lookup:
+                registry_entry = self._component_registry.get(component.name or "")
+                if registry_entry:
+                    return registry_entry.get("payload"), None
+                return None, "Component stack payload not available"
+
+            if isinstance(data, dict):
+                return data, None
+
+            if isinstance(data, bytes):
+                decoded_bytes = data
+            elif isinstance(data, str):
+                decoded_bytes = self._attempt_base64_decode(data)
+                if decoded_bytes is None:
+                    decoded_bytes = data.encode('utf-8')
+            else:
+                if allow_registry_lookup:
+                    registry_entry = self._component_registry.get(component.name or "")
+                    if registry_entry:
+                        return registry_entry.get("payload"), None
+                return None, "Unsupported payload format"
+
+            payload_str = decoded_bytes.decode('utf-8')
+            return json.loads(payload_str), None
+
+        except json.JSONDecodeError as exc:
+            return None, f"Failed to parse stack data: {exc}"
+        except Exception as exc:
+            return None, f"Unexpected error reading stack payload: {exc}"
+
+    def _attempt_base64_decode(self, data: str) -> Optional[bytes]:
+        """Try to base64 decode a string, returning None if decoding fails."""
+        try:
+            return base64.b64decode(data)
+        except Exception:
+            return None
+
+    def _publish_stack_action(
+        self,
+        method: str,
+        payload: Any,
+        context: str = ""
+    ) -> bool:
+        """Publish a stack action to the composer for execution."""
+        if not self.stack_publisher:
+            self.logger.error("Stack publisher is not initialized")
+            return False
+
+        try:
+            payload_str = payload if isinstance(payload, str) else json.dumps(payload)
+
+            msg_action = MutoAction()
+            msg_action.context = context
+            msg_action.method = method
+            msg_action.payload = payload_str
+
+            self.stack_publisher.publish(msg_action)
+            self.logger.debug(
+                f"Published stack action '{method}' with payload length {len(payload_str)}"
+            )
+            return True
+        except Exception as exc:
+            self.logger.error(f"Failed to publish stack action '{method}': {exc}")
+            return False
 
     def needs_update(
         self, 
