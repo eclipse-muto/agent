@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export SYMPHONY_API_URL=http://192.168.0.47:8082/v1alpha2/
+export SYMPHONY_API_URL=http://localhost:8082/v1alpha2/
 
 TOKEN=$(curl -X POST -H "Content-Type: application/json" -d '{"username":"admin","password":""}' "${SYMPHONY_API_URL}users/auth" | jq -r '.accessToken')
 
