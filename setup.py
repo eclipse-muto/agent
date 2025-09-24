@@ -25,7 +25,8 @@ setup(
         'console_scripts': [
             'muto_agent = agent.muto_agent:main',
             'mqtt = agent.mqtt:main',
-            'commands = agent.commands:main'            
+            'commands = agent.commands:main',
+            'symphony_provider = agent.symphony.symphony_provider:main'
         ],
     },
     python_requires='>=3.8',

@@ -42,7 +42,7 @@ class MQTTConnectionManager(ConnectionManager):
     automatic reconnection, proper error handling, and connection monitoring.
     """
 
-    def __init__(self, node: BaseNode, config: MQTTConfig, message_handler: Callable[[MQTTMessage], None], logger: Optional[Any] = None):
+    def __init__(self, node: BaseNode, config: MQTTConfig, message_handler: Callable[[MQTTMessage], None], on_connect_handler: Optional[Callable] = None, logger: Optional[Any] = None):
         """
         Initialize the MQTT connection manager.
         
@@ -53,6 +53,7 @@ class MQTTConnectionManager(ConnectionManager):
         """
         self._config = config
         self._message_handler = message_handler
+        self._on_connect_handler = on_connect_handler
         self._client: Optional[Client] = None
         self._connected = False
         self._node = node
@@ -209,14 +210,20 @@ class MQTTConnectionManager(ConnectionManager):
             reason_code: Connection result code.
             properties: MQTT v5 properties.
         """
+         
+       
         if reason_code == 0:
             self._connected = True
-            
-            # Subscribe to twin topic
-            twin_topic = f"{self._config.prefix}/{self._config.namespace}:{self._config.name}"
-            self.subscribe(twin_topic)
-            
-            self.get_logger().info(f"MQTT connected and subscribed to {twin_topic}")
+ 
+            # If there is a self.on_connect_handler use it otherwise default
+            if self._on_connect_handler is not None:
+                self._on_connect_handler(client, userdata, flags, reason_code, properties)
+            else:
+                # default behavior
+                # Subscribe to twin topic
+                twin_topic = f"{self._config.prefix}/{self._config.namespace}:{self._config.name}"
+                self.subscribe(twin_topic)
+                self.get_logger().info(f"MQTT connected and subscribed to {twin_topic}")
         else:
             self._connected = False
             self.get_logger().error(f"MQTT connection failed with reason code: {reason_code}")

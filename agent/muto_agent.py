@@ -27,6 +27,8 @@ and command processors.
 """
 
 # Standard library imports
+import signal
+import threading
 from typing import Optional, Tuple
 
 # Third-party imports
@@ -253,27 +255,56 @@ class MutoAgent(BaseNode):
 
 def main():
     """Main entry point for the Muto Agent."""
-    rclpy.init()
+    agent = None
+    shutdown_requested = threading.Event()
+    
+    def signal_handler(signum, frame):
+        """Handle shutdown signals gracefully."""
+        print(f"Received signal {signum}, initiating graceful shutdown...")
+        shutdown_requested.set()
+    
+    # Register signal handlers
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
     
     try:
+        rclpy.init()
         agent = MutoAgent()
         agent.initialize()
         
         if agent.is_ready():
             agent.get_logger().info("Muto Agent started successfully")
-            rclpy.spin(agent)
+            
+            # Custom spin loop to handle shutdown gracefully
+            while rclpy.ok() and not shutdown_requested.is_set():
+                try:
+                    rclpy.spin_once(agent, timeout_sec=1.0)
+                except KeyboardInterrupt:
+                    break
         else:
             agent.get_logger().error("Muto Agent failed to initialize properly")
             
+    except KeyboardInterrupt:
+        print("Muto Agent interrupted by user")
     except Exception as e:
         print(f"Failed to start Muto Agent: {e}")
         
     finally:
+        # Cleanup agent if it was created
+        if agent is not None:
+            try:
+                print("Cleaning up Muto Agent...")
+                agent.cleanup()
+            except Exception as e:
+                print(f"Error during agent cleanup: {e}")
+        
+        # Only shutdown ROS2 if it's still initialized and we haven't already shut it down
         try:
-            agent.cleanup()
-        except:
-            pass
-        rclpy.shutdown()
+            if rclpy.ok():
+                print("Shutting down ROS2...")
+                rclpy.shutdown()
+        except Exception as e:
+            print(f"Error during ROS2 shutdown (this may be normal): {e}")
 
 
 if __name__ == "__main__":

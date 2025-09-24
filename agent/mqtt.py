@@ -20,6 +20,8 @@
 
 # Standard library imports
 import json
+import signal
+import threading
 from typing import Optional
 
 # Third-party imports
@@ -311,26 +313,56 @@ class MQTT(BaseNode):
 
 
 def main():
-    """Main entry point for the MQTT Gateway."""
-    rclpy.init()
+    """Main entry point for the Muto MQTT."""
+    provider = None
+    shutdown_requested = threading.Event()
+    
+    def signal_handler(signum, frame):
+        """Handle shutdown signals gracefully."""
+        print(f"Received signal {signum}, initiating graceful shutdown...")
+        shutdown_requested.set()
+        if provider is not None:
+            provider._shutdown_event.set()
+    
+    # Register signal handlers
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
     
     try:
-        gateway = MQTT()
-        gateway.initialize()
+        rclpy.init()
+        provider = MQTT()
+        provider.initialize()
         
-        gateway.get_logger().info("MQTT Gateway started successfully")
-        rclpy.spin(gateway)
+        provider.get_logger().info("Muto MQTT started successfully")
         
+        # Custom spin loop to handle shutdown gracefully
+        while rclpy.ok() and not shutdown_requested.is_set():
+            try:
+                rclpy.spin_once(provider, timeout_sec=1.0)
+            except KeyboardInterrupt:
+                break
+        
+    except KeyboardInterrupt:
+        print("Muto MQTT interrupted by user")
     except Exception as e:
-        print(f"Failed to start MQTT Gateway: {e}")
+        print(f"Failed to start Muto MQTT: {e}")
         
     finally:
+        # Cleanup provider if it was created
+        if provider is not None:
+            try:
+                print("Cleaning up Muto MQTT...")
+                provider.cleanup()
+            except Exception as e:
+                print(f"Error during provider cleanup: {e}")
+        
+        # Only shutdown ROS2 if it's still initialized and we haven't already shut it down
         try:
-            gateway.cleanup()
-        except:
-            pass
-        rclpy.shutdown()
+            if rclpy.ok():
+                print("Shutting down ROS2...")
+                rclpy.shutdown()
+        except Exception as e:
+            print(f"Error during ROS2 shutdown (this may be normal): {e}")
 
-
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    exit(main())

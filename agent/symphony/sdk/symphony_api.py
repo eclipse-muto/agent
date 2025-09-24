@@ -1,0 +1,682 @@
+#
+# Copyright (c) 2023 Composiv.ai
+#
+# All rights reserved. This program and the accompanying materials
+# are made available under the terms of the Eclipse Public License v2.0
+# and Eclipse Distribution License v1.0 which accompany this distribution.
+#
+# Licensed under the Eclipse Public License v2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# The Eclipse Public License is available at
+#    http://www.eclipse.org/legal/epl-v20.html
+# and the Eclipse Distribution License is available at
+#   http://www.eclipse.org/org/documents/edl-v10.php.
+#
+# Contributors:
+#    Composiv.ai - initial API and implementation
+#
+
+"""
+Symphony REST API Client.
+
+This module provides a client for interacting with the Symphony REST API,
+including authentication, target registration/unregistration, and other
+Symphony operations based on the OpenAPI specification.
+"""
+
+import requests
+import json
+from typing import Dict, List, Optional, Any
+from datetime import datetime
+import logging
+
+
+class SymphonyAPIError(Exception):
+    """Custom exception for Symphony API errors."""
+    
+    def __init__(self, message: str, status_code: Optional[int] = None, response_text: Optional[str] = None):
+        super().__init__(message)
+        self.status_code = status_code
+        self.response_text = response_text
+
+
+class SymphonyAPIClient:
+    """
+    Symphony REST API Client.
+    
+    Provides methods for interacting with the Symphony API including:
+    - Authentication
+    - Target management (register/unregister)
+    - Solution management
+    - Instance management
+    - Other Symphony operations
+    """
+    
+    def __init__(self, base_url: str, username: str, password: str, timeout: float = 30.0, logger: Optional[logging.Logger] = None):
+        """
+        Initialize the Symphony API client.
+        
+        Args:
+            base_url: Base URL of the Symphony API (e.g., 'https://symphony.example.com')
+            username: Symphony username for authentication
+            password: Symphony password for authentication
+            timeout: Request timeout in seconds
+            logger: Optional logger instance
+        """
+        self.base_url = base_url.rstrip('/')
+        self.username = username
+        self.password = password
+        self.timeout = timeout
+        self.logger = logger or logging.getLogger(__name__)
+        
+        # Authentication state
+        self._access_token: Optional[str] = None
+        self._token_expiry: Optional[datetime] = None
+        
+        # Session for connection reuse
+        self._session = requests.Session()
+        self._session.headers.update({
+            'Content-Type': 'application/json',
+            'User-Agent': 'MutoSymphonyProvider/1.0.0'
+        })
+
+    def __enter__(self):
+        """Context manager entry."""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit - close session."""
+        self.close()
+
+    def close(self):
+        """Close the HTTP session."""
+        if self._session:
+            self._session.close()
+
+    def _make_request(self, method: str, endpoint: str, **kwargs) -> requests.Response:
+        """
+        Make an HTTP request to the Symphony API.
+        
+        Args:
+            method: HTTP method (GET, POST, PUT, DELETE, etc.)
+            endpoint: API endpoint (without base URL)
+            **kwargs: Additional arguments for requests
+            
+        Returns:
+            requests.Response object
+            
+        Raises:
+            SymphonyAPIError: If the request fails
+        """
+        url = f"{self.base_url}/{endpoint.lstrip('/')}"
+        
+        # Set default timeout
+        kwargs.setdefault('timeout', self.timeout)
+        
+        try:
+            self.logger.debug(f"Making {method} request to {url}")
+            response = self._session.request(method, url, **kwargs)
+            
+            self.logger.debug(f"Response: {response.status_code} {response.reason}")
+            
+            return response
+            
+        except requests.exceptions.RequestException as e:
+            self.logger.error(f"Request failed: {e}")
+            raise SymphonyAPIError(f"Request failed: {str(e)}")
+
+    def _handle_response(self, response: requests.Response, expected_codes: List[int] = None) -> Dict[str, Any]:
+        """
+        Handle API response and extract JSON data.
+        
+        Args:
+            response: requests.Response object
+            expected_codes: List of expected HTTP status codes (default: [200])
+            
+        Returns:
+            Parsed JSON response data
+            
+        Raises:
+            SymphonyAPIError: If response indicates an error
+        """
+        if expected_codes is None:
+            expected_codes = [200]
+            
+        if response.status_code not in expected_codes:
+            error_msg = f"API request failed with status {response.status_code}: {response.reason}"
+            self.logger.error(error_msg)
+            self.logger.error(f"Response body: {response.text}")
+            raise SymphonyAPIError(error_msg, response.status_code, response.text)
+        
+        # Handle empty responses
+        if not response.content.strip():
+            return {}
+            
+        try:
+            return response.json()
+        except json.JSONDecodeError as e:
+            self.logger.error(f"Failed to parse JSON response: {e}")
+            self.logger.error(f"Response body: {response.text}")
+            raise SymphonyAPIError(f"Invalid JSON response: {str(e)}")
+
+    def authenticate(self, force_refresh: bool = False) -> str:
+        """
+        Authenticate with Symphony API and return access token.
+        
+        Args:
+            force_refresh: Force token refresh even if current token is valid
+            
+        Returns:
+            Access token string
+            
+        Raises:
+            SymphonyAPIError: If authentication fails
+        """
+        # Check if we have a valid token
+        if not force_refresh and self._access_token and self._token_expiry:
+            if datetime.utcnow() < self._token_expiry:
+                return self._access_token
+        
+        self.logger.info(f"Authenticating with Symphony API as user '{self.username}'")
+        
+        auth_payload = {
+            "username": self.username,
+            "password": self.password
+        }
+        
+        response = self._make_request('POST', '/users/auth', json=auth_payload)
+        data = self._handle_response(response)
+        
+        access_token = data.get('accessToken')
+        if not access_token:
+            raise SymphonyAPIError("No access token in authentication response")
+        
+        self._access_token = access_token
+        # Assume token is valid for 1 hour (adjust based on Symphony configuration)
+        self._token_expiry = datetime.utcnow().replace(microsecond=0).replace(second=0) 
+        self._token_expiry = self._token_expiry.replace(minute=(self._token_expiry.minute + 50) % 60)
+        
+        # Update session headers with token
+        self._session.headers.update({
+            'Authorization': f'Bearer {access_token}'
+        })
+        
+        self.logger.info("Successfully authenticated with Symphony API")
+        return access_token
+
+    def _ensure_authenticated(self):
+        """Ensure we have a valid authentication token."""
+        if not self._access_token:
+            self.authenticate()
+        # Token refresh is handled automatically in authenticate()
+
+    # Target Management Methods
+    
+    def register_target(self, target_name: str, target_spec: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Register a target with Symphony.
+        
+        Args:
+            target_name: Name of the target to register
+            target_spec: Target specification dictionary
+            
+        Returns:
+            API response data
+            
+        Raises:
+            SymphonyAPIError: If registration fails
+        """
+        self._ensure_authenticated()
+        
+        self.logger.info(f"Registering target '{target_name}' with Symphony")
+        
+        response = self._make_request(
+            'POST', 
+            f'/targets/registry/{target_name}',
+            json=target_spec
+        )
+        
+        data = self._handle_response(response, [200, 201])
+        self.logger.info(f"Successfully registered target '{target_name}'")
+        
+        return data
+
+    def unregister_target(self, target_name: str, direct: bool = False) -> Dict[str, Any]:
+        """
+        Unregister a target from Symphony.
+        
+        Args:
+            target_name: Name of the target to unregister
+            direct: Whether to use direct delete
+            
+        Returns:
+            API response data
+            
+        Raises:
+            SymphonyAPIError: If unregistration fails
+        """
+        self._ensure_authenticated()
+        
+        self.logger.info(f"Unregistering target '{target_name}' from Symphony")
+        
+        params = {'direct': 'true'} if direct else {}
+        
+        response = self._make_request(
+            'DELETE',
+            f'/targets/registry/{target_name}',
+            params=params
+        )
+        
+        data = self._handle_response(response, [200, 204])
+        self.logger.info(f"Successfully unregistered target '{target_name}'")
+        
+        return data
+
+    def get_target(self, target_name: str, doc_type: str = 'yaml', path: str = '$.spec') -> Dict[str, Any]:
+        """
+        Get target specification.
+        
+        Args:
+            target_name: Name of the target
+            doc_type: Document type (yaml, json)
+            path: JSONPath to extract from response
+            
+        Returns:
+            Target specification data
+            
+        Raises:
+            SymphonyAPIError: If request fails
+        """
+        self._ensure_authenticated()
+        
+        params = {
+            'doc-type': doc_type,
+            'path': path
+        }
+        
+        response = self._make_request(
+            'GET',
+            f'/targets/registry/{target_name}',
+            params=params
+        )
+        
+        return self._handle_response(response)
+
+    def list_targets(self) -> Dict[str, Any]:
+        """
+        List all registered targets.
+        
+        Returns:
+            List of targets
+            
+        Raises:
+            SymphonyAPIError: If request fails
+        """
+        self._ensure_authenticated()
+        
+        response = self._make_request('GET', '/targets/registry')
+        return self._handle_response(response)
+
+    def ping_target(self, target_name: str) -> Dict[str, Any]:
+        """
+        Send heartbeat ping to target.
+        
+        Args:
+            target_name: Name of the target to ping
+            
+        Returns:
+            Ping response data
+            
+        Raises:
+            SymphonyAPIError: If request fails
+        """
+        self._ensure_authenticated()
+        
+        response = self._make_request('GET', f'/targets/ping/{target_name}')
+        return self._handle_response(response)
+
+    def update_target_status(self, target_name: str, status_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Update target status.
+        
+        Args:
+            target_name: Name of the target
+            status_data: Status information dictionary
+            
+        Returns:
+            API response data
+            
+        Raises:
+            SymphonyAPIError: If request fails
+        """
+        self._ensure_authenticated()
+        
+        response = self._make_request(
+            'PUT',
+            f'/targets/status/{target_name}',
+            json=status_data
+        )
+        
+        return self._handle_response(response)
+
+    # Solution Management Methods
+    
+    def create_solution(self, solution_name: str, solution_spec: str, embed_type: Optional[str] = None, 
+                       embed_component: Optional[str] = None, embed_property: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Create a solution with embedded specification.
+        
+        Args:
+            solution_name: Name of the solution
+            solution_spec: Solution specification as text
+            embed_type: Optional embed type
+            embed_component: Optional embed component
+            embed_property: Optional embed property
+            
+        Returns:
+            API response data
+            
+        Raises:
+            SymphonyAPIError: If request fails
+        """
+        self._ensure_authenticated()
+        
+        params = {}
+        if embed_type:
+            params['embed-type'] = embed_type
+        if embed_component:
+            params['embed-component'] = embed_component
+        if embed_property:
+            params['embed-property'] = embed_property
+        
+        response = self._make_request(
+            'POST',
+            f'/solutions/{solution_name}',
+            data=solution_spec,
+            params=params,
+            headers={'Content-Type': 'text/plain'}
+        )
+        
+        return self._handle_response(response)
+
+    def get_solution(self, solution_name: str, doc_type: str = 'yaml', path: str = '$.spec') -> Dict[str, Any]:
+        """
+        Get solution specification.
+        
+        Args:
+            solution_name: Name of the solution
+            doc_type: Document type (yaml, json)
+            path: JSONPath to extract from response
+            
+        Returns:
+            Solution specification data
+            
+        Raises:
+            SymphonyAPIError: If request fails
+        """
+        self._ensure_authenticated()
+        
+        params = {
+            'doc-type': doc_type,
+            'path': path
+        }
+        
+        response = self._make_request(
+            'GET',
+            f'/solutions/{solution_name}',
+            params=params
+        )
+        
+        return self._handle_response(response)
+
+    def delete_solution(self, solution_name: str) -> Dict[str, Any]:
+        """
+        Delete a solution.
+        
+        Args:
+            solution_name: Name of the solution to delete
+            
+        Returns:
+            API response data
+            
+        Raises:
+            SymphonyAPIError: If request fails
+        """
+        self._ensure_authenticated()
+        
+        response = self._make_request('DELETE', f'/solutions/{solution_name}')
+        return self._handle_response(response)
+
+    def list_solutions(self) -> Dict[str, Any]:
+        """
+        List all solutions.
+        
+        Returns:
+            List of solutions
+            
+        Raises:
+            SymphonyAPIError: If request fails
+        """
+        self._ensure_authenticated()
+        
+        response = self._make_request('GET', '/solutions')
+        return self._handle_response(response)
+
+    # Instance Management Methods
+    
+    def create_instance(self, instance_name: str, instance_spec: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Create an instance.
+        
+        Args:
+            instance_name: Name of the instance
+            instance_spec: Instance specification dictionary
+            
+        Returns:
+            API response data
+            
+        Raises:
+            SymphonyAPIError: If request fails
+        """
+        self._ensure_authenticated()
+        
+        response = self._make_request(
+            'POST',
+            f'/instances/{instance_name}',
+            json=instance_spec
+        )
+        
+        return self._handle_response(response)
+
+    def get_instance(self, instance_name: str, doc_type: str = 'yaml', path: str = '$.spec') -> Dict[str, Any]:
+        """
+        Get instance specification.
+        
+        Args:
+            instance_name: Name of the instance
+            doc_type: Document type (yaml, json)
+            path: JSONPath to extract from response
+            
+        Returns:
+            Instance specification data
+            
+        Raises:
+            SymphonyAPIError: If request fails
+        """
+        self._ensure_authenticated()
+        
+        params = {
+            'doc-type': doc_type,
+            'path': path
+        }
+        
+        response = self._make_request(
+            'GET',
+            f'/instances/{instance_name}',
+            params=params
+        )
+        
+        return self._handle_response(response)
+
+    def delete_instance(self, instance_name: str) -> Dict[str, Any]:
+        """
+        Delete an instance.
+        
+        Args:
+            instance_name: Name of the instance to delete
+            
+        Returns:
+            API response data
+            
+        Raises:
+            SymphonyAPIError: If request fails
+        """
+        self._ensure_authenticated()
+        
+        response = self._make_request('DELETE', f'/instances/{instance_name}')
+        return self._handle_response(response)
+
+    def list_instances(self) -> Dict[str, Any]:
+        """
+        List all instances.
+        
+        Returns:
+            List of instances
+            
+        Raises:
+            SymphonyAPIError: If request fails
+        """
+        self._ensure_authenticated()
+        
+        response = self._make_request('GET', '/instances')
+        return self._handle_response(response)
+
+    # Solution Operations (for deployments)
+    
+    def apply_deployment(self, deployment_spec: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Apply a deployment (POST to /solution/instances).
+        
+        Args:
+            deployment_spec: Deployment specification dictionary
+            
+        Returns:
+            API response data
+            
+        Raises:
+            SymphonyAPIError: If request fails
+        """
+        self._ensure_authenticated()
+        
+        response = self._make_request('POST', '/solution/instances', json=deployment_spec)
+        return self._handle_response(response)
+
+    def get_deployment_components(self) -> Dict[str, Any]:
+        """
+        Get deployment components (GET /solution/instances).
+        
+        Returns:
+            Components data
+            
+        Raises:
+            SymphonyAPIError: If request fails
+        """
+        self._ensure_authenticated()
+        
+        response = self._make_request('GET', '/solution/instances')
+        return self._handle_response(response)
+
+    def delete_deployment_components(self) -> Dict[str, Any]:
+        """
+        Delete deployment components (DELETE /solution/instances).
+        
+        Returns:
+            API response data
+            
+        Raises:
+            SymphonyAPIError: If request fails
+        """
+        self._ensure_authenticated()
+        
+        response = self._make_request('DELETE', '/solution/instances')
+        return self._handle_response(response)
+
+    def reconcile_solution(self, deployment_spec: Dict[str, Any], delete: bool = False) -> Dict[str, Any]:
+        """
+        Direct reconcile/delete deployment (POST to /solution/reconcile).
+        
+        Args:
+            deployment_spec: Deployment specification dictionary
+            delete: Whether this is a delete operation
+            
+        Returns:
+            API response data
+            
+        Raises:
+            SymphonyAPIError: If request fails
+        """
+        self._ensure_authenticated()
+        
+        params = {'delete': 'true'} if delete else {}
+        
+        response = self._make_request(
+            'POST',
+            '/solution/reconcile',
+            json=deployment_spec,
+            params=params
+        )
+        
+        return self._handle_response(response)
+
+    def get_instance_status(self, instance_name: str) -> Dict[str, Any]:
+        """
+        Get instance status (GET /solution/queue).
+        
+        Args:
+            instance_name: Name of the instance
+            
+        Returns:
+            Instance status data
+            
+        Raises:
+            SymphonyAPIError: If request fails
+        """
+        self._ensure_authenticated()
+        
+        params = {'instance': instance_name}
+        
+        response = self._make_request('GET', '/solution/queue', params=params)
+        return self._handle_response(response)
+
+    # Utility Methods
+    
+    def health_check(self) -> bool:
+        """
+        Perform a basic health check of the Symphony API.
+        
+        Returns:
+            True if API is accessible, False otherwise
+        """
+        try:
+            # Try a simple endpoint that doesn't require auth
+            response = self._make_request('GET', '/greetings', json={'foo': 'bar'})
+            return response.status_code == 200
+        except Exception as e:
+            self.logger.error(f"Health check failed: {e}")
+            return False
+
+    def get_api_config(self) -> Dict[str, Any]:
+        """
+        Get Symphony API configuration (GET /settings/config).
+        
+        Returns:
+            Configuration data
+            
+        Raises:
+            SymphonyAPIError: If request fails
+        """
+        self._ensure_authenticated()
+        
+        response = self._make_request('GET', '/settings/config')
+        return self._handle_response(response)

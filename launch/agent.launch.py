@@ -1,69 +1,133 @@
-#
-#  Copyright (c) 2023 Composiv.ai
-#
-# All rights reserved. This program and the accompanying materials
-# are made available under the terms of the Eclipse Public License v2.0
-# and Eclipse Distribution License v1.0 which accompany this distribution.
-#
-# Licensed under the  Eclipse Public License v2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-# The Eclipse Public License is available at
-#    http://www.eclipse.org/legal/epl-v20.html
-# and the Eclipse Distribution License is available at
-#   http://www.eclipse.org/org/documents/edl-v10.php.
-#
-# Contributors:
-#    Composiv.ai - initial API and implementation
-#
-#
-
+import os
 from launch import LaunchDescription
 from launch_ros.actions import Node
+from launch.actions import DeclareLaunchArgument
+from launch.conditions import IfCondition
+from launch.substitutions import LaunchConfiguration
+from launch.actions.include_launch_description import IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from ament_index_python.packages import get_package_share_directory
-
-import os
 
 pkg_name = "agent"
 output = "screen"
 
 def generate_launch_description():
+    # Arguments
+    # Use this file's location to get config files
+    config_dir = os.path.join(get_package_share_directory(pkg_name), "config")
+ 
+    
+    # Declare launch arguments
+    declared_arguments = [
+        DeclareLaunchArgument(
+            'enable_symphony',
+            default_value='true',
+            description='Enable Symphony MQTT provider',
+            choices=['true', 'false']
+        ),
+        DeclareLaunchArgument(
+            'log_level',
+            default_value='INFO',
+            description='Logging level for all nodes',
+            choices=['DEBUG', 'INFO', 'WARN', 'ERROR']
+        ),
 
-    # Files
-    file_config = os.path.join(get_package_share_directory(pkg_name), "config", "agent.yaml")
+        DeclareLaunchArgument(
+            'muto_config_file',
+            default_value= os.path.join(config_dir, "muto.yaml"),
+            description='Path to global Muto configuration file'
+        ),
+        DeclareLaunchArgument("muto_namespace", default_value="muto"),
+        DeclareLaunchArgument(
+            "vehicle_namespace",
+            default_value="org.eclipse.muto.sandbox",
+            description="Vehicle ID namespace",
+        ),
+        DeclareLaunchArgument(
+            "vehicle_name",  description="Vehicle ID"
+        )
+    ]
+    
+    # Configuration parameters
+    enable_symphony = LaunchConfiguration('enable_symphony')
+    log_level = LaunchConfiguration('log_level')
+    muto_config_file = LaunchConfiguration('muto_config_file')
+    vehicle_namespace = LaunchConfiguration('vehicle_namespace')
+    vehicle_name = LaunchConfiguration('vehicle_name')
+    muto_namespace = LaunchConfiguration('muto_namespace')
 
 
-    # Nodes
+    # Agent
     node_agent = Node(
-        name="muto_agent",
+        namespace=muto_namespace,
+        name="agent",
         package="agent",
         executable="muto_agent",
-        output=output,
-        parameters=[file_config]
+        output="screen",
+        parameters=[
+            muto_config_file,
+            {"namespace": vehicle_namespace},
+            {"name": vehicle_name},
+        ],
     )
 
     node_mqtt_gateway = Node(
-        name="mqtt_gateway",
+        namespace=muto_namespace,
+        name="gateway",
         package="agent",
         executable="mqtt",
-        output=output,
-        parameters=[file_config]
+        output="screen",
+        parameters=[
+            muto_config_file,
+            {"namespace": vehicle_namespace},
+            {"name": vehicle_name},
+        ],
+        arguments=['--ros-args', '--log-level', log_level]
     )
 
     node_commands = Node(
+        namespace=muto_namespace,
         name="commands_plugin",
         package="agent",
         executable="commands",
-        output=output,
-        parameters=[file_config]
+        output="screen",
+        parameters=[
+            muto_config_file,
+            {"namespace": vehicle_namespace},
+            {"name": vehicle_name},
+        ],
+        arguments=['--ros-args', '--log-level', log_level]
     )
 
+    # Symphony Provider (conditional)
+
+    symphony_provider = Node(
+        namespace=muto_namespace,
+        package='agent',
+        executable='symphony_provider',
+        name='muto_symphony_provider',
+        output='screen',
+        condition=IfCondition(enable_symphony),
+        parameters=[
+            muto_config_file,
+            {"name": vehicle_name},
+            {"namespace": vehicle_namespace},
+            {"symphony_target_name": vehicle_name},
+        ],
+        arguments=['--ros-args', '--log-level', log_level]
+    )
 
     # Launch Description Object
     ld = LaunchDescription()
 
+    # add all declared arguments
+    for arg in declared_arguments:
+        ld.add_action(arg)
+
+    # add all nodes
     ld.add_action(node_agent)
     ld.add_action(node_mqtt_gateway)
     ld.add_action(node_commands)
+    ld.add_action(symphony_provider)
 
     return ld

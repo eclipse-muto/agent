@@ -1,0 +1,14 @@
+{
+    "metadata": {
+        "name": "test-robot-debug-instance",
+        "labels": {
+            "muto": "demo"
+        }
+    },
+    "spec": {
+        "solution": "talker-listener:1",
+        "target": {
+            "name": "test-robot-debug"
+        }
+    }
+}

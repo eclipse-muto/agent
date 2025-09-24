@@ -1,0 +1,17 @@
+{
+  "name": "Muto Simple Talker-Listener Stack",
+  "context": "eteration_office",
+  "stackId": "org.eclipse.muto.sandbox:talker_listener",
+  "node": [
+    {
+      "name": "talker",
+      "pkg": "demo_nodes_cpp",
+      "exec": "talker"
+    },
+    {
+      "name": "listener",
+      "pkg": "demo_nodes_cpp",
+      "exec": "listener"
+    }
+  ]
+}

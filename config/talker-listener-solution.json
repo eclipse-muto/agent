@@ -1,0 +1,31 @@
+{
+    "metadata": {
+        "namespace": "default",
+        "name": "talker-listener-v-2"
+    },
+    "spec": {
+        "displayName": "talker-listener-v-2",
+        "rootResource": "talker-listener",
+        "version": "2",
+        "components": [
+            {
+                "name": "talker-listener-stack",
+                "type": "muto-agent",
+                "properties": {
+                    "type": "stack", 
+                    "content-type": "json", 
+                    "data": "ewogICJuYW1lIjogIk11dG8gU2ltcGxlIFRhbGtlci1MaXN0ZW5lciBTdGFjayIsCiAgImNvbnRleHQiOiAiZXRlcmF0aW9uX29mZmljZSIsCiAgInN0YWNrSWQiOiAib3JnLmVjbGlwc2UubXV0by5zYW5kYm94OnRhbGtlcl9saXN0ZW5lciIsCiAgIm5vZGUiOiBbCiAgICB7CiAgICAgICJuYW1lIjogInRhbGtlciIsCiAgICAgICJwa2ciOiAiZGVtb19ub2Rlc19jcHAiLAogICAgICAiZXhlYyI6ICJ0YWxrZXIiCiAgICB9LAogICAgewogICAgICAibmFtZSI6ICJsaXN0ZW5lciIsCiAgICAgICJwa2ciOiAiZGVtb19ub2Rlc19jcHAiLAogICAgICAiZXhlYyI6ICJsaXN0ZW5lciIKICAgIH0KICBdCn0="
+                }
+            },
+            {
+                "name": "talker-listener-stack2",
+                "type": "muto-agent",
+                "properties": {
+                    "type": "stack", 
+                    "content-type": "json", 
+                    "data": "ewogICJuYW1lIjogIk11dG8gU2ltcGxlIFRhbGtlci1MaXN0ZW5lciBTdGFjayIsCiAgImNvbnRleHQiOiAiZXRlcmF0aW9uX29mZmljZSIsCiAgInN0YWNrSWQiOiAib3JnLmVjbGlwc2UubXV0by5zYW5kYm94OnRhbGtlcl9saXN0ZW5lciIsCiAgIm5vZGUiOiBbCiAgICB7CiAgICAgICJuYW1lIjogInRhbGtlciIsCiAgICAgICJwa2ciOiAiZGVtb19ub2Rlc19jcHAiLAogICAgICAiZXhlYyI6ICJ0YWxrZXIiCiAgICB9LAogICAgewogICAgICAibmFtZSI6ICJsaXN0ZW5lciIsCiAgICAgICJwa2ciOiAiZGVtb19ub2Rlc19jcHAiLAogICAgICAiZXhlYyI6ICJsaXN0ZW5lciIKICAgIH0KICBdCn0="
+                }
+            }
+        ]
+    }
+}
