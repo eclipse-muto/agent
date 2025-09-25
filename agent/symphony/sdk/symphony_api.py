@@ -28,7 +28,7 @@ Symphony operations based on the OpenAPI specification.
 import requests
 import json
 from typing import Dict, List, Optional, Any
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 
 
@@ -175,7 +175,8 @@ class SymphonyAPIClient:
         """
         # Check if we have a valid token
         if not force_refresh and self._access_token and self._token_expiry:
-            if datetime.utcnow() < self._token_expiry:
+            # Use timezone-aware UTC datetimes
+            if datetime.now(timezone.utc) < self._token_expiry:
                 return self._access_token
         
         self.logger.info(f"Authenticating with Symphony API as user '{self.username}'")
@@ -191,17 +192,18 @@ class SymphonyAPIClient:
         access_token = data.get('accessToken')
         if not access_token:
             raise SymphonyAPIError("No access token in authentication response")
-        
+
         self._access_token = access_token
-        # Assume token is valid for 1 hour (adjust based on Symphony configuration)
-        self._token_expiry = datetime.utcnow().replace(microsecond=0).replace(second=0) 
+        # Assume token is valid for ~1 hour (adjust based on Symphony configuration)
+        # Use timezone-aware UTC datetimes and truncate seconds/micros
+        self._token_expiry = datetime.now(timezone.utc).replace(microsecond=0, second=0)
         self._token_expiry = self._token_expiry.replace(minute=(self._token_expiry.minute + 50) % 60)
-        
+
         # Update session headers with token
         self._session.headers.update({
             'Authorization': f'Bearer {access_token}'
         })
-        
+
         self.logger.info("Successfully authenticated with Symphony API")
         return access_token
 
