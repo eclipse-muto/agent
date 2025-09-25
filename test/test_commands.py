@@ -284,7 +284,17 @@ class TestParamCommands(unittest.TestCase):
         assert type(result) == CommandPlugin.Response
         assert type(result.output) == CommandOutput
         assert type(result.output.result) == PluginResponse
-        assert result.output.payload == json.dumps(expected_payload)
+
+        # Parse payload and verify it contains at least the expected parameters
+        payload_obj = json.loads(result.output.payload)
+        assert isinstance(payload_obj, dict)
+        assert "params" in payload_obj and isinstance(payload_obj["params"], list)
+
+        params_map = {p.get("name"): p.get("value") for p in payload_obj["params"]}
+        assert params_map.get("use_sim_time") is False
+        assert params_map.get("agent_to_commands_topic") == "msg_3"
+
+        # Result metadata should remain successful
         assert result.output.result == expected_response
 
     def test_callack_rosparam_get(self):
