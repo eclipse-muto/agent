@@ -21,7 +21,7 @@ from paho.mqtt.client import MQTTMessage
 
 # Local imports
 from ..mqtt_manager import MQTTConnectionManager
-from .sdk.symphony_sdk import (
+from symphony_sdk import (
     COARequest,
     COAResponse,
     ComparisonPack,

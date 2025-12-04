@@ -6,16 +6,13 @@ Comprehensive unit tests for Symphony SDK core functionality.
 import unittest
 import json
 import base64
-from unittest.mock import Mock, patch
-from symphony_sdk import (
+from symphony_sdk.models import (
     COARequest,
     COAResponse,
     ComponentSpec,
     DeploymentSpec,
     SolutionSpec,
     SolutionState,
-    TargetSpec,
-    InstanceSpec,
     to_dict,
     from_dict,
     serialize_components,
@@ -28,7 +25,6 @@ from symphony_sdk import (
     ObjectMeta
 )
 from symphony_sdk.types import State
-from agent.symphony.provider_base import SymphonyProvider
 
 
 class TestObjectMeta(unittest.TestCase):
@@ -471,40 +467,6 @@ class TestUtilityFunctions(unittest.TestCase):
         self.assertEqual(response.state, State.ACCEPTED)
         self.assertEqual(response.content_type, "application/json")
         self.assertEqual(response.metadata, {"processed": "true"})
-
-
-class TestSymphonyProvider(unittest.TestCase):
-    """Test cases for SymphonyProvider abstract class."""
-    
-    def test_symphony_provider_interface(self):
-        """Test that SymphonyProvider defines required interface methods."""
-        # Test that abstract methods exist
-        self.assertTrue(hasattr(SymphonyProvider, 'init_provider'))
-        self.assertTrue(hasattr(SymphonyProvider, 'apply'))
-        self.assertTrue(hasattr(SymphonyProvider, 'remove'))
-        self.assertTrue(hasattr(SymphonyProvider, 'get'))
-        
-        # Test that methods are callable
-        self.assertTrue(callable(getattr(SymphonyProvider, 'init_provider')))
-        self.assertTrue(callable(getattr(SymphonyProvider, 'apply')))
-        self.assertTrue(callable(getattr(SymphonyProvider, 'remove')))
-        self.assertTrue(callable(getattr(SymphonyProvider, 'get')))
-
-    def test_symphony_provider_not_implemented_errors(self):
-        """Test that SymphonyProvider methods raise NotImplementedError."""
-        provider = SymphonyProvider()
-        
-        with self.assertRaises(NotImplementedError):
-            provider.init_provider()
-        
-        with self.assertRaises(NotImplementedError):
-            provider.apply({}, [])
-        
-        with self.assertRaises(NotImplementedError):
-            provider.remove({}, [])
-        
-        with self.assertRaises(NotImplementedError):
-            provider.get({}, [])
 
 
 if __name__ == '__main__':

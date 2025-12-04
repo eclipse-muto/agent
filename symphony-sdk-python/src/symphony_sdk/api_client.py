@@ -214,7 +214,6 @@ class SymphonyAPI:
         # Token refresh is handled automatically in authenticate()
 
     # Target Management Methods
-    
     def register_target(self, target_name: str, target_spec: Dict[str, Any]) -> Dict[str, Any]:
         """
         Register a target with Symphony.

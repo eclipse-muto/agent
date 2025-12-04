@@ -1,0 +1,46 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "symphony-sdk"
+version = "0.1.0"
+description = "Pure Python SDK for Eclipse Symphony"
+readme = "README.md"
+license = { text = "EPL-2.0 OR MIT" }
+requires-python = ">=3.9"
+authors = [
+    { name = "composiv.ai", email = "info@composiv.ai" }
+]
+dependencies = [
+    "requests>=2.25"
+]
+
+[project.optional-dependencies]
+mqtt = [
+    "paho-mqtt>=2.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/eclipse-muto/agent"
+Issues = "https://github.com/eclipse-muto/agent/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/symphony_sdk"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/symphony_sdk",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+]
+
+[tool.uv.sources]
+symphony-sdk = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "symphony-sdk",
+    "twine>=6.2.0",
+]
