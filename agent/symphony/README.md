@@ -10,15 +10,13 @@ src/agent/agent/symphony/
 ├── provider_base.py         # Local abstract SymphonyProvider interface
 ├── symphony_broker.py       # MQTT broker integration
 ├── symphony_provider.py     # Muto-specific provider
-└── sdk/__init__.py          # Deprecation shim (imports symphony_sdk)
 ```
 
 ## Import Examples
 
 ```python
-from symphony_sdk import SymphonyAPI, SummaryResult, State
-from agent.symphony.provider_base import SymphonyProvider
-from agent.symphony.symphony_provider import MutoSymphonyProvider
+from symphony_sdk.api_client import SymphonyAPI
+from symphony_sdk.models import InstanceSpec
 ```
 
 Use `pip install symphony-sdk` (or the bundled `symphony-sdk-python` directory) to access the COA models, REST client, and summary/types modules.
