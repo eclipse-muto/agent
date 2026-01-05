@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from enum import IntEnum
 from typing import Dict, Optional
 from datetime import datetime
-from .symphony_types import State
+from symphony_sdk.types import State
 
 
 class SummaryState(IntEnum):

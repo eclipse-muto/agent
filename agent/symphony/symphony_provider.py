@@ -41,20 +41,19 @@ from std_srvs.srv import Trigger
 # Local imports
 from ..config import ConfigurationManager
 from ..interfaces import BaseNode
-from .sdk.symphony_api import SymphonyAPIClient, SymphonyAPIError
-from .sdk.symphony_sdk import (
+from symphony_sdk import (
+    SymphonyAPI,
+    SymphonyAPIError,
     ComponentSpec,
     ComparisonPack,
-    SymphonyProvider,
-    to_dict,
-)
-from .sdk.symphony_summary import (
     ComponentResultSpec,
     SummarySpec,
     SummaryState,
     TargetResultSpec,
+    State,
+    to_dict,
 )
-from .sdk.symphony_types import State
+from .provider_base import SymphonyProvider
 from .symphony_broker import MQTTBroker
 
 
@@ -88,7 +87,7 @@ class MutoSymphonyProvider(BaseNode, SymphonyProvider):
         self._mqtt_broker: Optional[MQTTBroker] = None
         
         # Symphony API client
-        self._api_client: Optional[SymphonyAPIClient] = None
+        self._api_client: Optional[SymphonyAPI] = None
         
         # Lifecycle management
         self._shutdown_event = threading.Event()
@@ -133,7 +132,7 @@ class MutoSymphonyProvider(BaseNode, SymphonyProvider):
         """Initialize Symphony API client."""
         try:
             symphony = self._config.symphony
-            self._api_client = SymphonyAPIClient(
+            self._api_client = SymphonyAPI(
                 base_url=symphony.api_url,
                 username=symphony.mqtt.user,
                 password=symphony.mqtt.password,

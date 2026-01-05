@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2023 Composiv.ai
+#  Copyright (c) 2025 Composiv.ai
 #
 # All rights reserved. This program and the accompanying materials
 # are made available under the terms of the Eclipse Public License v2.0
@@ -18,21 +18,24 @@
 #
 
 """
-Symphony SDK Data Structures for Muto Agent.
+Symphony SDK data structures and utilities.
 
-This module provides Symphony-compatible data structures and utilities
-following the official Eclipse Symphony Python SDK patterns.
+This module provides Symphony-compatible data structures and helpers
+following the official Eclipse Symphony COA patterns.
 """
 
 # Standard library imports
 import base64
 import json
+import logging
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union, get_args, get_origin
 
-# Local imports
-from .symphony_types import State
+from symphony_sdk.types import State
+
+
+logger = logging.getLogger(__name__)
 
 @dataclass
 class ObjectMeta:
@@ -317,7 +320,7 @@ class COABodyMixin:
 @dataclass  
 class COARequest(COABodyMixin):
     """
-    Course of Action Request structure based on Symphony COA API.
+    COA Request structure based on Symphony COA API.
     
     This corresponds to the Go struct COARequest from Symphony codebase.
     The body field contains base64 encoded data, with the content type determined by content_type:
@@ -348,7 +351,7 @@ class COARequest(COABodyMixin):
 @dataclass
 class COAResponse(COABodyMixin):
     """
-    Course of Action Response structure based on Symphony COA API.
+    COA Response structure based on Symphony COA API.
     
     This corresponds to the Go struct COAResponse from Symphony codebase.
     The body field contains base64 encoded data, with the content type determined by content_type:
@@ -520,7 +523,7 @@ def deserialize_deployment(json_str: str) -> List[DeploymentSpec]:
         data = json.loads(json_str)
         return [from_dict(data, DeploymentSpec)]
     except Exception as e:
-        print(f"Error deserializing deployment: {e}")
+        logger.error("Error deserializing deployment: %s", e)
         return []
 
 
@@ -557,7 +560,7 @@ def deserialize_coa_request(json_str: str) -> COARequest:
             
         return request
     except Exception as e:
-        print(f"Error deserializing COA request: {e}")
+        logger.error("Error deserializing COA request: %s", e)
         return COARequest()
 
 
@@ -595,144 +598,44 @@ def deserialize_coa_response(json_str: str) -> COAResponse:
             
         return response
     except Exception as e:
-        print(f"Error deserializing COA response: {e}")
+        logger.error("Error deserializing COA response: %s", e)
         return COAResponse()
 
 
-    """_summary_
-
-A python implementatiomnon of the SymphonyProvider ITargetProvider interface
-type ITargetProvider interface {
-	Init(config providers.IProviderConfig) error
-	// get validation rules
-	GetValidationRule(ctx context.Context) model.ValidationRule
-	// get current component states from a target. The desired state is passed in as a reference
-	Get(ctx context.Context, deployment model.DeploymentSpec, references []model.ComponentStep) ([]model.ComponentSpec, error)
-	// apply components to a target
-	Apply(ctx context.Context, deployment model.DeploymentSpec, step model.DeploymentStep, isDryRun bool) (map[string]model.ComponentResultSpec, error)
-}
-    """
-class SymphonyProvider:
-    """
-    Abstract base class for Symphony providers.
-    
-    This defines the interface that all Symphony providers must implement,
-    following the official Symphony provider specification.
-    """
-    def init_provider(self) -> None:
-        """
-        Initialize the provider with the given configuration.
-        
-        Args:
-            config: Configuration dictionary for the provider.
-        """
-        raise NotImplementedError("init_provider method must be implemented")
-    
-        """ 
-# your script needs to generate an output file that contains a map of component results. For each
-# component result, the status code should be one of
-# 8001: fialed to update
-# 8002: failed to delete
-# 8003: failed to validate component artifact
-# 8004: updated (success)
-# 8005: deleted (success)
-# 9998: untouched - no actions are taken/necessary
-
-output_results='{
-    "com1": {
-        "status": 8004,
-        "message": ""
-    },
-    "com2": {
-        "status": 8001,
-        "message": "update error message" 
-    }
-}'
-
-        """
-    def apply(self, metadata: Dict[str, Any], components: List[ComponentSpec]) -> str:
-        """
-        Apply/deploy components to the target.
-        
-        Args:
-            components: List of components to deploy
-            
-        Returns:
-            JSON string with deployment results
-        """
-        raise NotImplementedError("apply method must be implemented")
-    
-    def remove(self, metadata: Dict[str, Any], components: List[ComponentSpec]) -> str:
-        """
-        Remove components from the target.
-        
-        Args:
-            components: List of components to remove
-            
-        Returns:
-            JSON string with removal results
-        """
-        raise NotImplementedError("remove method must be implemented")
-   
-    #
-    # to get the list components you need to return during this Get() call, you can 
-    # read from the references parameter file. This file gives you a list of components and 
-    # their associated actions, which can be either "update" or "delete". Your script is 
-    # supposed to use this list as a reference (regardless of the action flag) to collect
-    # the current state of the corresponding components, and return the list. If a component
-    # doesn't exist, simply skip the component.
-    def get(self, metadata: Dict[str, Any], components: List[ComponentSpec]) -> str:
-        """
-        Get current state of components on the target.
-        
-        Args:
-            components: List of components to query (empty for all)
-            
-        Returns:
-            JSON string with current component states
-        """
-        raise NotImplementedError("get method must be implemented")
-    
-    def needs_update(self, metadata: Dict[str, Any], pack: ComparisonPack) -> bool:
-        """
-        Check if components need to be updated.
-        
-        Args:
-            pack: Comparison pack with desired vs current states
-            
-        Returns:
-            True if update is needed, False otherwise
-        """
-        raise NotImplementedError("needs_update method must be implemented")
-    
-    """
-# your script needs to generate an output file that contains a map of component results. For each
-# component result, the status code should be one of
-# 8001: fialed to update
-# 8002: failed to delete
-# 8003: failed to validate component artifact
-# 8004: updated (success)
-# 8005: deleted (success)
-# 9998: untouched - no actions are taken/necessary
-
-output_results='{
-    "com1": {
-        "status": 8004,
-        "message": ""
-    },
-    "com2": {
-        "status": 8001,
-        "message": "update error message" 
-    }
-}'"""
-    def needs_remove(self, metadata: Dict[str, Any], pack: ComparisonPack) -> bool:
-        """
-        Check if components need to be removed.
-        
-        Args:
-            pack: Comparison pack with desired vs current states
-            
-        Returns:
-            True if removal is needed, False otherwise
-        """
-        raise NotImplementedError("needs_remove method must be implemented")
+__all__ = [
+    'ObjectMeta',
+    'TargetSelector',
+    'BindingSpec',
+    'TopologySpec',
+    'PipelineSpec',
+    'VersionSpec',
+    'InstanceSpec',
+    'FilterSpec',
+    'RouteSpec',
+    'ComponentSpec',
+    'SolutionSpec',
+    'SolutionState',
+    'TargetSpec',
+    'ComponentError',
+    'TargetError',
+    'ErrorType',
+    'ProvisioningStatus',
+    'TargetStatus',
+    'TargetState',
+    'DeviceSpec',
+    'DeploymentSpec',
+    'ComparisonPack',
+    'COABodyMixin',
+    'COARequest',
+    'COAResponse',
+    'to_dict',
+    'from_dict',
+    'serialize_components',
+    'deserialize_components',
+    'deserialize_solution',
+    'deserialize_deployment',
+    'serialize_coa_request',
+    'deserialize_coa_request',
+    'serialize_coa_response',
+    'deserialize_coa_response',
+]

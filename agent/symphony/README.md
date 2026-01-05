@@ -1,56 +1,22 @@
-# SDK Package
+# Symphony Integration Package
 
-The `agent.symphony.sdk` package contains an SDK for Symphony data structures and utilities:
+The core Symphony SDK has been extracted into the standalone [`symphony-sdk`](../../symphony-sdk-python) project.  The Muto agent now depends on that package and only keeps the provider/broker implementation locally.
 
-- **symphony_api.py**: REST API client and authentication
-- **symphony_sdk.py**: COA protocol, data structures, serialization
-- **symphony_summary.py**: Deployment summary and result models  
-- **symphony_types.py**: State enums and constants
-
-## Package Structure
+## Current Layout
 
 ```
 src/agent/agent/symphony/
-├── __init__.py              # Package exports and convenience imports
+├── __init__.py              # Re-exports from symphony_sdk + provider shim
+├── provider_base.py         # Local abstract SymphonyProvider interface
 ├── symphony_broker.py       # MQTT broker integration
-├── symphony_provider.py     # Main Symphony provider implementation
-└── sdk/                     # Core SDK components
-    ├── __init__.py          # SDK exports and convenience imports
-    ├── symphony_api.py      # REST API client for Symphony
-    ├── symphony_sdk.py      # COA data structures and SDK
-    ├── symphony_summary.py  # Summary models and result handling
-    └── symphony_types.py    # State enums and constants
+├── symphony_provider.py     # Muto-specific provider
 ```
 
-## Import 
-```python
-# Convenient imports from main symphony package
-from agent.symphony import COARequest, COAResponse, State
-
-# SDK-specific imports
-from agent.symphony.sdk import SummaryResult, SymphonyAPIClient
-
-# Provider/broker imports
-from agent.symphony.symphony_provider import MutoSymphonyProvider
-
-# Direct module access
-from agent.symphony.sdk.symphony_types import State as SymphonyState
-```
-
-
-### SDK Usage Examples
+## Import Examples
 
 ```python
-# Import everything from SDK
-from agent.symphony.sdk import *
-
-# Create COA request/response
-request = COARequest(method='GET', route='/targets')
-response = COAResponse.success({'targets': []})
-
-# Use summary models
-summary = SummarySpec(target_count=1, success_count=1)
-
-# API client usage  
-client = SymphonyAPIClient(base_url='http://localhost:8082/v1alpha2/')
+from symphony_sdk.api_client import SymphonyAPI
+from symphony_sdk.models import InstanceSpec
 ```
+
+Use `pip install symphony-sdk` (or the bundled `symphony-sdk-python` directory) to access the COA models, REST client, and summary/types modules.

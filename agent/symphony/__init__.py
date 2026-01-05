@@ -10,33 +10,28 @@ This package contains all Symphony-related components including:
 - Type definitions
 """
 
-# Import commonly used components for convenience
-from .sdk.symphony_sdk import (
+from symphony_sdk import (
     COARequest,
     COAResponse,
     ComponentSpec,
     DeploymentSpec,
     SolutionSpec,
-    SymphonyProvider,
     TargetSpec,
-    deserialize_coa_request,
-    deserialize_coa_response,
-    serialize_coa_request,
-    serialize_coa_response,
-)
-from .sdk.symphony_summary import (
     ComponentResultSpec,
     SummaryResult,
     SummarySpec,
     SummaryState,
     TargetResultSpec,
-)
-from .sdk.symphony_types import (
     COAConstants,
     State,
     Terminable,
     get_http_status,
+    deserialize_coa_request,
+    deserialize_coa_response,
+    serialize_coa_request,
+    serialize_coa_response,
 )
+from .provider_base import SymphonyProvider
 
 # Export main classes for external use
 __all__ = [

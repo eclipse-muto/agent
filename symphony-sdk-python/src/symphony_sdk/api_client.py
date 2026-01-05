@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2023 Composiv.ai
+# Copyright (c) 2025 Composiv.ai
 #
 # All rights reserved. This program and the accompanying materials
 # are made available under the terms of the Eclipse Public License v2.0
@@ -41,7 +41,7 @@ class SymphonyAPIError(Exception):
         self.response_text = response_text
 
 
-class SymphonyAPIClient:
+class SymphonyAPI:
     """
     Symphony REST API Client.
     
@@ -78,7 +78,7 @@ class SymphonyAPIClient:
         self._session = requests.Session()
         self._session.headers.update({
             'Content-Type': 'application/json',
-            'User-Agent': 'MutoSymphonyProvider/1.0.0'
+            'User-Agent': 'SymphonySDK/0.1.0'
         })
 
     def __enter__(self):
@@ -214,7 +214,6 @@ class SymphonyAPIClient:
         # Token refresh is handled automatically in authenticate()
 
     # Target Management Methods
-    
     def register_target(self, target_name: str, target_spec: Dict[str, Any]) -> Dict[str, Any]:
         """
         Register a target with Symphony.
@@ -335,7 +334,7 @@ class SymphonyAPIClient:
         """
         self._ensure_authenticated()
         
-        response = self._make_request('GET', f'/targets/ping/{target_name}')
+        response = self._make_request('POST', f'/targets/ping/{target_name}')
         return self._handle_response(response)
 
     def update_target_status(self, target_name: str, status_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -682,3 +681,9 @@ class SymphonyAPIClient:
         
         response = self._make_request('GET', '/settings/config')
         return self._handle_response(response)
+
+
+__all__ = [
+    'SymphonyAPI',
+    'SymphonyAPIError',
+]

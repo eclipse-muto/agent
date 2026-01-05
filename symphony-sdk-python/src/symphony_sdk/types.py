@@ -10,7 +10,6 @@ from the original Go implementation.
 """
 
 import abc
-import asyncio
 from enum import IntEnum
 from typing import Protocol
 
