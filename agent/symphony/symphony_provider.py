@@ -197,31 +197,26 @@ class MutoSymphonyProvider(BaseNode, SymphonyProvider):
         try:
             # Build target registration payload
             target_payload = {
-                "metadata": {
-                    "name": symphony.target
-                },
-                "spec": {
-                    "displayName": symphony.target,
-                    "forceRedeploy": True,
-                    "topologies": [
-                        {
-                            "bindings": [
-                                {
-                                    "role": "muto-agent",
-                                    "provider": symphony.provider_name,
-                                    "config": {
-                                        "name": "proxy",
-                                        "brokerAddress": symphony.broker_address,
-                                        "clientID": symphony.client_id,
-                                        "requestTopic": f"{symphony.topic_prefix}/{symphony.request_topic}",
-                                        "responseTopic": f"{symphony.topic_prefix}/{symphony.response_topic}",
-                                        "timeoutSeconds": symphony.timeout_seconds
-                                    }
+                "displayName": symphony.target,
+                "forceRedeploy": True,
+                "topologies": [
+                    {
+                        "bindings": [
+                            {
+                                "role": "muto-agent",
+                                "provider": symphony.provider_name,
+                                "config": {
+                                    "name": "proxy",
+                                    "brokerAddress": symphony.broker_address,
+                                    "clientID": symphony.client_id,
+                                    "requestTopic": f"{symphony.topic_prefix}/{symphony.request_topic}",
+                                    "responseTopic": f"{symphony.topic_prefix}/{symphony.response_topic}",
+                                    "timeoutSeconds": symphony.timeout_seconds
                                 }
-                            ]
-                        }
-                    ]
-                }
+                            }
+                        ]
+                    }
+                ]
             }
             
             # Register target using API client
@@ -397,8 +392,10 @@ class MutoSymphonyProvider(BaseNode, SymphonyProvider):
                 )
                 target_result.component_results[component_name] = component_result
                 self.logger.error(component_result.message)
+                # Do NOT update _component_registry on failed publish
                 continue
 
+            # Only update registry after confirmed successful publish
             successes += 1
             component_result.status = State.UPDATED
             component_result.message = (
@@ -406,6 +403,7 @@ class MutoSymphonyProvider(BaseNode, SymphonyProvider):
             )
             target_result.component_results[component_name] = component_result
 
+            # Registry mutation: only performed after successful stack action publish
             self._component_registry[component_name] = {
                 "component": to_dict(component),
                 "payload": stack_payload,
@@ -497,8 +495,10 @@ class MutoSymphonyProvider(BaseNode, SymphonyProvider):
                 )
                 target_result.component_results[component_name] = component_result
                 self.logger.error(component_result.message)
+                # Do NOT modify _component_registry on failed publish
                 continue
 
+            # Only update registry after confirmed successful publish
             successes += 1
             component_result.status = State.DELETED
             component_result.message = (
@@ -506,7 +506,7 @@ class MutoSymphonyProvider(BaseNode, SymphonyProvider):
             )
             target_result.component_results[component_name] = component_result
 
-            # Drop from registry once removal is confirmed
+            # Registry mutation: only performed after successful stack action publish
             self._component_registry.pop(component_name, None)
 
         target_result.status = "OK" if failures == 0 else "FAILED"
@@ -557,20 +557,32 @@ class MutoSymphonyProvider(BaseNode, SymphonyProvider):
         else:
             component_names = [comp.name for comp in components if comp.name]
 
+        # Read-only operation: get() does NOT modify _component_registry
+        # Only report components that are successfully found in the registry
         reported_components: List[Dict[str, Any]] = []
         for component_name in component_names:
             state_entry = self._component_registry.get(component_name)
             if not state_entry:
+                # Component not found - do not create or persist any state
                 self.logger.debug(
                     f"Component {component_name} not found in registry; skipping"
                 )
                 continue
 
-            component_info = dict(state_entry["component"])
-            component_info["status"] = state_entry.get("status", "unknown")
-            component_info["state"] = state_entry.get("state", State.NONE.value)
-            component_info["last_action"] = state_entry.get("last_action", "")
-            reported_components.append(component_info)
+            # Successfully retrieved component state from registry
+            # Create a copy to avoid external mutation of registry data
+            try:
+                component_info = dict(state_entry["component"])
+                component_info["status"] = state_entry.get("status", "unknown")
+                component_info["state"] = state_entry.get("state", State.NONE.value)
+                component_info["last_action"] = state_entry.get("last_action", "")
+                reported_components.append(component_info)
+            except (KeyError, TypeError) as exc:
+                # Failed to retrieve component state - do not persist stale data
+                self.logger.warning(
+                    f"Failed to retrieve state for component {component_name}: {exc}"
+                )
+                continue
 
         return json.dumps(reported_components, indent=2)
 
