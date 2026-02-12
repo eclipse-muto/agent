@@ -9,11 +9,10 @@ This module provides Python translations of the Symphony API summary models
 from the original Go implementation.
 """
 
-import time
 from dataclasses import dataclass, field
-from enum import IntEnum
-from typing import Dict, Optional
 from datetime import datetime
+from enum import IntEnum
+
 from symphony_sdk.types import State
 
 
@@ -21,36 +20,34 @@ class SummaryState(IntEnum):
     """
     State enumeration for Symphony summary operations.
     """
-    PENDING = 0   # Currently unused
-    RUNNING = 1   # Indicates that a reconcile operation is in progress
-    DONE = 2      # Indicates that a reconcile operation has completed (successfully or unsuccessfully)
+
+    PENDING = 0  # Currently unused
+    RUNNING = 1  # Indicates that a reconcile operation is in progress
+    DONE = 2  # Indicates that a reconcile operation has completed (successfully or unsuccessfully)
 
 
 @dataclass
 class ComponentResultSpec:
     """
     Result specification for a single component operation.
-    
+
     Attributes:
         status: State indicating success/failure of the component operation
         message: Optional message with details about the operation
     """
+
     status: State = State.OK
     message: str = ""
-    
-    def to_dict(self) -> Dict[str, any]:
+
+    def to_dict(self) -> dict[str, any]:
         """Convert to dictionary representation."""
-        return {
-            "status": self.status.value,
-            "message": self.message
-        }
-    
+        return {"status": self.status.value, "message": self.message}
+
     @classmethod
-    def from_dict(cls, data: Dict[str, any]) -> 'ComponentResultSpec':
+    def from_dict(cls, data: dict[str, any]) -> "ComponentResultSpec":
         """Create instance from dictionary."""
         return cls(
-            status=State(data.get("status", State.OK.value)),
-            message=data.get("message", "")
+            status=State(data.get("status", State.OK.value)), message=data.get("message", "")
         )
 
 
@@ -58,32 +55,30 @@ class ComponentResultSpec:
 class TargetResultSpec:
     """
     Result specification for a target containing multiple components.
-    
+
     Attributes:
         status: Overall status string for the target
         message: Optional message with target-level details
         component_results: Map of component name to component result
     """
+
     status: str = "OK"
     message: str = ""
-    component_results: Dict[str, ComponentResultSpec] = field(default_factory=dict)
-    
-    def to_dict(self) -> Dict[str, any]:
+    component_results: dict[str, ComponentResultSpec] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, any]:
         """Convert to dictionary representation."""
-        result = {
-            "status": self.status
-        }
+        result = {"status": self.status}
         if self.message:
             result["message"] = self.message
         if self.component_results:
             result["components"] = {
-                name: comp_result.to_dict() 
-                for name, comp_result in self.component_results.items()
+                name: comp_result.to_dict() for name, comp_result in self.component_results.items()
             }
         return result
-    
+
     @classmethod
-    def from_dict(cls, data: Dict[str, any]) -> 'TargetResultSpec':
+    def from_dict(cls, data: dict[str, any]) -> "TargetResultSpec":
         """Create instance from dictionary."""
         component_results = {}
         if "components" in data:
@@ -91,11 +86,11 @@ class TargetResultSpec:
                 name: ComponentResultSpec.from_dict(comp_data)
                 for name, comp_data in data["components"].items()
             }
-        
+
         return cls(
             status=data.get("status", "OK"),
             message=data.get("message", ""),
-            component_results=component_results
+            component_results=component_results,
         )
 
 
@@ -103,7 +98,7 @@ class TargetResultSpec:
 class SummarySpec:
     """
     Specification for deployment summary containing target and component results.
-    
+
     Attributes:
         target_count: Total number of targets
         success_count: Number of successful deployments
@@ -117,22 +112,23 @@ class SummarySpec:
         all_assigned_deployed: Whether all assigned components are deployed
         removed: Whether components were removed
     """
+
     target_count: int = 0
     success_count: int = 0
     planned_deployment: int = 0
     current_deployed: int = 0
-    target_results: Dict[str, TargetResultSpec] = field(default_factory=dict)
+    target_results: dict[str, TargetResultSpec] = field(default_factory=dict)
     summary_message: str = ""
     job_id: str = ""
     skipped: bool = False
     is_removal: bool = False
     all_assigned_deployed: bool = False
     removed: bool = False
-    
+
     def update_target_result(self, target: str, spec: TargetResultSpec) -> None:
         """
         Update target result, merging with existing result if present.
-        
+
         Args:
             target: Target name
             spec: New target result specification
@@ -141,67 +137,67 @@ class SummarySpec:
             self.target_results[target] = spec
         else:
             existing = self.target_results[target]
-            
+
             # Update status - use new status if it's not "OK"
             status = existing.status
             if spec.status != "OK":
                 status = spec.status
-            
+
             # Merge messages
             message = existing.message
             if spec.message:
                 if message:
                     message += "; "
                 message += spec.message
-            
+
             # Merge component results
             merged_components = existing.component_results.copy()
             merged_components.update(spec.component_results)
-            
+
             # Update the existing result
             existing.status = status
             existing.message = message
             existing.component_results = merged_components
-            
+
             self.target_results[target] = existing
-    
+
     def generate_status_message(self) -> str:
         """
         Generate a detailed status message from target and component results.
-        
+
         Returns:
             Formatted status message with error details
         """
         if self.all_assigned_deployed:
             return ""
-        
+
         error_message = "Failed to deploy"
         if self.summary_message:
             error_message += f": {self.summary_message}"
         error_message += ". "
-        
+
         # Get target names and sort them for consistent output
         target_names = sorted(self.target_results.keys())
-        
+
         # Build target errors in sorted order
         target_errors = []
         for target in target_names:
             result = self.target_results[target]
             target_error = f'{target}: "{result.message}"'
-            
+
             # Get component names and sort them for consistency
             component_names = sorted(result.component_results.keys())
-            
+
             # Add component results in sorted order
             for component in component_names:
                 component_result = result.component_results[component]
                 target_error += f" ({target}.{component}: {component_result.message})"
-            
+
             target_errors.append(target_error)
-        
+
         return error_message + f"Detailed status: {', '.join(target_errors)}"
-    
-    def to_dict(self) -> Dict[str, any]:
+
+    def to_dict(self) -> dict[str, any]:
         """Convert to dictionary representation."""
         result = {
             "targetCount": self.target_count,
@@ -211,23 +207,22 @@ class SummarySpec:
             "skipped": self.skipped,
             "isRemoval": self.is_removal,
             "allAssignedDeployed": self.all_assigned_deployed,
-            "removed": self.removed
+            "removed": self.removed,
         }
-        
+
         if self.target_results:
             result["targets"] = {
-                name: target_result.to_dict()
-                for name, target_result in self.target_results.items()
+                name: target_result.to_dict() for name, target_result in self.target_results.items()
             }
         if self.summary_message:
             result["message"] = self.summary_message
         if self.job_id:
             result["jobID"] = self.job_id
-            
+
         return result
-    
+
     @classmethod
-    def from_dict(cls, data: Dict[str, any]) -> 'SummarySpec':
+    def from_dict(cls, data: dict[str, any]) -> "SummarySpec":
         """Create instance from dictionary."""
         target_results = {}
         if "targets" in data:
@@ -235,7 +230,7 @@ class SummarySpec:
                 name: TargetResultSpec.from_dict(target_data)
                 for name, target_data in data["targets"].items()
             }
-        
+
         return cls(
             target_count=data.get("targetCount", 0),
             success_count=data.get("successCount", 0),
@@ -247,7 +242,7 @@ class SummarySpec:
             skipped=data.get("skipped", False),
             is_removal=data.get("isRemoval", False),
             all_assigned_deployed=data.get("allAssignedDeployed", False),
-            removed=data.get("removed", False)
+            removed=data.get("removed", False),
         )
 
 
@@ -255,7 +250,7 @@ class SummarySpec:
 class SummaryResult:
     """
     Complete summary result for a deployment operation.
-    
+
     Attributes:
         summary: The summary specification with all results
         summary_id: Optional unique identifier for the summary
@@ -264,23 +259,24 @@ class SummaryResult:
         state: Current state of the summary operation
         deployment_hash: Hash of the deployment configuration
     """
+
     summary: SummarySpec = field(default_factory=SummarySpec)
     summary_id: str = ""
     generation: str = ""
     time: datetime = field(default_factory=datetime.now)
     state: SummaryState = SummaryState.PENDING
     deployment_hash: str = ""
-    
+
     def is_deployment_finished(self) -> bool:
         """
         Check if the deployment operation has finished.
-        
+
         Returns:
             True if deployment is done (successfully or unsuccessfully)
         """
         return self.state == SummaryState.DONE
-    
-    def to_dict(self) -> Dict[str, any]:
+
+    def to_dict(self) -> dict[str, any]:
         """Convert to dictionary representation."""
         return {
             "summary": self.summary.to_dict(),
@@ -288,11 +284,11 @@ class SummaryResult:
             "generation": self.generation,
             "time": self.time.isoformat(),
             "state": self.state.value,
-            "deploymentHash": self.deployment_hash
+            "deploymentHash": self.deployment_hash,
         }
-    
+
     @classmethod
-    def from_dict(cls, data: Dict[str, any]) -> 'SummaryResult':
+    def from_dict(cls, data: dict[str, any]) -> "SummaryResult":
         """Create instance from dictionary."""
         # Parse time string
         time_obj = datetime.now()
@@ -301,14 +297,14 @@ class SummaryResult:
                 time_obj = datetime.fromisoformat(data["time"])
             except (ValueError, TypeError):
                 pass
-        
+
         return cls(
             summary=SummarySpec.from_dict(data.get("summary", {})),
             summary_id=data.get("summaryid", ""),
             generation=data.get("generation", ""),
             time=time_obj,
             state=SummaryState(data.get("state", SummaryState.PENDING.value)),
-            deployment_hash=data.get("deploymentHash", "")
+            deployment_hash=data.get("deploymentHash", ""),
         )
 
 
@@ -325,26 +321,23 @@ def create_failed_component_result(message: str, status: State = None) -> Compon
     return ComponentResultSpec(status=status, message=message)
 
 
-def create_target_result(status: str = "OK", message: str = "", 
-                        component_results: Dict[str, ComponentResultSpec] = None) -> TargetResultSpec:
+def create_target_result(
+    status: str = "OK", message: str = "", component_results: dict[str, ComponentResultSpec] = None
+) -> TargetResultSpec:
     """Create a target result specification."""
     if component_results is None:
         component_results = {}
-    return TargetResultSpec(
-        status=status,
-        message=message, 
-        component_results=component_results
-    )
+    return TargetResultSpec(status=status, message=message, component_results=component_results)
 
 
 # Export commonly used items
 __all__ = [
-    'SummaryState',
-    'ComponentResultSpec', 
-    'TargetResultSpec',
-    'SummarySpec',
-    'SummaryResult',
-    'create_success_component_result',
-    'create_failed_component_result', 
-    'create_target_result'
+    "SummaryState",
+    "ComponentResultSpec",
+    "TargetResultSpec",
+    "SummarySpec",
+    "SummaryResult",
+    "create_success_component_result",
+    "create_failed_component_result",
+    "create_target_result",
 ]

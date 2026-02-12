@@ -1,39 +1,32 @@
 #
-#  Copyright (c) 2023 Composiv.ai
+# Copyright (c) 2023 Composiv.ai
 #
-# All rights reserved. This program and the accompanying materials
-# are made available under the terms of the Eclipse Public License v2.0
-# and Eclipse Distribution License v1.0 which accompany this distribution.
+# This program and the accompanying materials are made available under the
+# terms of the Eclipse Public License 2.0 which is available at
+# http://www.eclipse.org/legal/epl-2.0.
 #
-# Licensed under the  Eclipse Public License v2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-# The Eclipse Public License is available at
-#    http://www.eclipse.org/legal/epl-v20.html
-# and the Eclipse Distribution License is available at
-#   http://www.eclipse.org/org/documents/edl-v10.php.
+# SPDX-License-Identifier: EPL-2.0
 #
 # Contributors:
-#    Composiv.ai - initial API and implementation
-#
+#   Composiv.ai - initial API and implementation
 #
 
 # Standard library imports
 import json
 import time
-from typing import Any, Dict, Type, Optional
+from typing import Any
 
 # Third-party imports
 from ackermann_msgs.msg import *
 from diagnostic_msgs.msg import *
 from geometry_msgs.msg import *
+from muto_msgs.msg import *
+from muto_msgs.srv import CommandPlugin, CoreTwin
 from nav_msgs.msg import *
+from rclpy.node import Node
 from sensor_msgs.msg import *
 from std_msgs.msg import *
 from tf2_msgs.msg import *
-from rclpy.node import Node
-from muto_msgs.msg import *
-from muto_msgs.srv import CommandPlugin, CoreTwin
 
 # Local imports
 from muto_agent.ros.msg_converter import json_message_converter
@@ -42,11 +35,11 @@ from muto_agent.ros.msg_converter import json_message_converter
 class TopicEcho:
     """
     Handles topic echoing functionality for ROS 2 topics.
-    
-    This class provides functionality to subscribe to ROS topics and 
+
+    This class provides functionality to subscribe to ROS topics and
     echo their messages at specified rates, with support for various
     message types and conversion to JSON format.
-    
+
     Args:
         node: The ROS node instance for creating subscriptions.
         payload: Configuration payload containing topic and rate info.
@@ -54,29 +47,23 @@ class TopicEcho:
         meta: Message metadata for response handling.
     """
 
-    def __init__(
-        self, 
-        node: Node, 
-        payload: Dict[str, Any], 
-        topic_type: str, 
-        meta: Any
-    ) -> None:
+    def __init__(self, node: Node, payload: dict[str, Any], topic_type: str, meta: Any) -> None:
         self.node = node
-        
+
         self.payload = payload
         self.ros_topic = payload["topic"]
         self.action = payload["action"]
         # Divide by 1000 to convert ms to s
-        self.rate = payload["rate"]/1000
+        self.rate = payload["rate"] / 1000
         self.target = payload["topic"]
         self.meta = meta
-        
+
         self.ros_topic_type = self.convert_ros_topic_type(topic_type)
 
         self.sub = None
         self.last_send = time.time()
 
-    def convert_ros_topic_type(self, topic_type: str) -> Type[Any]:
+    def convert_ros_topic_type(self, topic_type: str) -> type[Any]:
         """
         Converts the ROS topic type string into its corresponding Python class.
 
@@ -117,7 +104,7 @@ class TopicEcho:
     def start(self):
         self.register_telemetry()
         self.subscribe()
-    
+
     def stop(self):
         if self.sub != None:
             self.node.destroy_subscription(self.sub)
@@ -127,36 +114,38 @@ class TopicEcho:
         self.stop()
         self.delete_telemetry()
 
-
     def subscribe(self):
         self.sub = self.node.create_subscription(
-            self.ros_topic_type,
-            self.ros_topic,
-            self.topic_callback,
-            1
+            self.ros_topic_type, self.ros_topic, self.topic_callback, 1
         )
-    
-    def topic_callback(self, data):
-        message_time = time.time() 
 
-        if message_time-self.last_send > self.rate:
+    def topic_callback(self, data):
+        message_time = time.time()
+
+        if message_time - self.last_send > self.rate:
             self.last_send = message_time
             msg = json_message_converter.convert_ros_message_to_json(data)
 
             self.node.publish_telemetry(msg, self.meta)
 
 
-class TopicCommands():
-    """ # TODO add docs."""
+class TopicCommands:
+    """# TODO add docs."""
 
     def __init__(self, node):
         self.node = node
 
         self.echoed_nodes = {}
 
-        self.rostopic_list = self.node.create_service(CommandPlugin, "rostopic_list", self.callback_rostopic_list)
-        self.rostopic_info = self.node.create_service(CommandPlugin, "rostopic_info", self.callback_rostopic_info)
-        self.rostopic_echo = self.node.create_service(CommandPlugin, "rostopic_echo", self.callback_rostopic_echo)
+        self.rostopic_list = self.node.create_service(
+            CommandPlugin, "rostopic_list", self.callback_rostopic_list
+        )
+        self.rostopic_info = self.node.create_service(
+            CommandPlugin, "rostopic_info", self.callback_rostopic_info
+        )
+        self.rostopic_echo = self.node.create_service(
+            CommandPlugin, "rostopic_echo", self.callback_rostopic_echo
+        )
 
     def callback_rostopic_list(self, request, response):
         """
@@ -179,11 +168,10 @@ class TopicCommands():
 
         result = {"pubs": pubs, "subs": subs}
 
-
         response.output = self.node.construct_command_output_message(result)
 
         return response
-    
+
     def callback_rostopic_info(self, request, response):
         """
         Callback function for handling rostopic_info service request.
@@ -207,13 +195,12 @@ class TopicCommands():
         if requested_topic != None:
             result = self.get_topic_info(requested_topic)
 
-
         response.output = self.node.construct_command_output_message(result)
 
         return response
 
     def callback_rostopic_echo(self, request, response):
-        """ # TODO add docs."""
+        """# TODO add docs."""
         payload = json.loads(request.input.payload)["value"]
         ros_topic_to_echo = payload["topic"]
         action = payload["action"]
@@ -290,9 +277,9 @@ class TopicCommands():
             temp = []
             for endpoint in endpoints:
                 temp.append(endpoint.node_name)
-            
+
             pubs.append((topic, type_, temp))
-        
+
         return pubs
 
     def construct_subscribers(self, topics):
@@ -316,9 +303,9 @@ class TopicCommands():
             temp = []
             for endpoint in endpoints:
                 temp.append(endpoint.node_name)
-            
+
             subs.append((topic, type_, temp))
-        
+
         return subs
 
     def get_topic_info(self, topic):
@@ -345,9 +332,9 @@ class TopicCommands():
             info["subs"].append({"subscriber": subscription.node_name})
             if info["types"] == None:
                 info["types"] = subscription.topic_type
-        
+
         return info
-    
+
     def get_topic_type(self, topics, requested_topic):
         for topic, type_ in topics:
             if topic == requested_topic:
