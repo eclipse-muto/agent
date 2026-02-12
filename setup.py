@@ -6,7 +6,7 @@ package_name = 'agent'
 
 setup(
     name=package_name,
-    version='2.0.0',
+    version='0.42.0',
     packages=find_packages(),
     data_files=[
         ('share/ament_index/resource_index/packages', ['resource/' + package_name]),
@@ -18,7 +18,7 @@ setup(
     zip_safe=True,
     maintainer='Composive Team',
     maintainer_email='info@composiv.ai',
-    description='Eclipse Muto Agent Package - Refactored for improved modularity and robustness',
+    description='Eclipse Muto Agent - pluggable communication gateway bridging ROS 2 nodes with cloud backends via MQTT/Ditto and Symphony protocols',
     license='Eclipse Public License v2.0',
     tests_require=['pytest'],
     entry_points={
