@@ -18,6 +18,8 @@
 #
 #
 
+from __future__ import annotations
+
 """
 Base interfaces and abstract classes for the Muto Agent system.
 """

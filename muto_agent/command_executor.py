@@ -18,6 +18,8 @@
 #
 #
 
+from __future__ import annotations
+
 """
 Command execution and management for the Muto Agent system.
 """
