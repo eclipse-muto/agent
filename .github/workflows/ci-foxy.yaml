@@ -1,0 +1,47 @@
+name: Foxy
+
+on:
+  push:
+    branches: [main, chore/*, feat/*, fix/*]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-20.04
+    container: ros:foxy-ros-base
+    env:
+      PIP_BREAK_SYSTEM_PACKAGES: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Clone muto_msgs
+        run: |
+          mkdir -p /tmp/ws/src
+          ln -s $GITHUB_WORKSPACE /tmp/ws/src/agent
+          git clone https://github.com/eclipse-muto/messages.git /tmp/ws/src/messages
+
+      - name: Install dependencies
+        run: |
+          apt-get update -y
+          apt-get install -y python3-pip python3-colcon-common-extensions git
+          cd /tmp/ws
+          . /opt/ros/foxy/setup.sh
+          rosdep update
+          rosdep install --from-paths src --ignore-src -r -y --rosdistro foxy
+          pip3 install src/agent/symphony-sdk-python/
+
+      - name: Build
+        run: |
+          cd /tmp/ws
+          . /opt/ros/foxy/setup.sh
+          colcon build --packages-select muto_msgs muto_agent
+
+      - name: Test
+        run: |
+          cd /tmp/ws
+          . /opt/ros/foxy/setup.sh
+          . install/setup.sh
+          colcon test --packages-select muto_agent --event-handlers console_direct+
+          colcon test-result --verbose
