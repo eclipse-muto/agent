@@ -1,9 +1,10 @@
 # Muto Agent
 
-[![CI](https://github.com/eclipse-muto/agent/actions/workflows/colcon-build.yaml/badge.svg)](https://github.com/eclipse-muto/agent/actions/workflows/colcon-build.yaml)
-![ROS 2 Foxy](https://img.shields.io/badge/ROS%202-Foxy-blue)
-![ROS 2 Humble](https://img.shields.io/badge/ROS%202-Humble-blue)
-![ROS 2 Jazzy](https://img.shields.io/badge/ROS%202-Jazzy-blue)
+| ROS 2 Distro | Ubuntu | Python | Status |
+|---|---|---|---|
+| Foxy | 20.04 | 3.8 | [![Foxy](https://github.com/eclipse-muto/agent/actions/workflows/colcon-build.yaml/badge.svg)](https://github.com/eclipse-muto/agent/actions/workflows/colcon-build.yaml) |
+| Humble | 22.04 | 3.10 | [![Humble](https://github.com/eclipse-muto/agent/actions/workflows/colcon-build.yaml/badge.svg)](https://github.com/eclipse-muto/agent/actions/workflows/colcon-build.yaml) |
+| Jazzy | 24.04 | 3.12 | [![Jazzy](https://github.com/eclipse-muto/agent/actions/workflows/colcon-build.yaml/badge.svg)](https://github.com/eclipse-muto/agent/actions/workflows/colcon-build.yaml) |
 
 **Muto Agent** is the agnostic communication bridge within Eclipse Muto's declarative orchestrator for ROS software stacks on automotive edge devices. As the robot's secure gateway to any cloud backend, it features a pluggable architecture that makes Muto fundamentally agnostic to external systems, enabling interoperability with various cloud orchestrators and communication standards.
 
