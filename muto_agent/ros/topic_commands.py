@@ -36,7 +36,7 @@ from muto_msgs.msg import *
 from muto_msgs.srv import CommandPlugin, CoreTwin
 
 # Local imports
-from agent.ros.msg_converter import json_message_converter
+from muto_agent.ros.msg_converter import json_message_converter
 
 
 class TopicEcho:

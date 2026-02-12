@@ -28,7 +28,7 @@ from symphony_sdk import (
     ObjectMeta
 )
 from symphony_sdk.types import State
-from agent.symphony.provider_base import SymphonyProvider
+from muto_agent.symphony.provider_base import SymphonyProvider
 
 
 class TestObjectMeta(unittest.TestCase):

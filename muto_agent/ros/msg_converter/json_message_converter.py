@@ -17,7 +17,7 @@
 
 import json
 
-from agent.ros.msg_converter import message_converter
+from muto_agent.ros.msg_converter import message_converter
 
 
 def convert_json_to_ros_message(message_type, json_message, strict_mode=True):

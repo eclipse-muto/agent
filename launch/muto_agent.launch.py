@@ -8,7 +8,7 @@ from launch.actions.include_launch_description import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from ament_index_python.packages import get_package_share_directory
 
-pkg_name = "agent"
+pkg_name = "muto_agent"
 output = "screen"
 
 def generate_launch_description():
@@ -61,7 +61,7 @@ def generate_launch_description():
     node_agent = Node(
         namespace=muto_namespace,
         name="agent",
-        package="agent",
+        package="muto_agent",
         executable="muto_agent",
         output="screen",
         parameters=[
@@ -74,7 +74,7 @@ def generate_launch_description():
     node_mqtt_gateway = Node(
         namespace=muto_namespace,
         name="gateway",
-        package="agent",
+        package="muto_agent",
         executable="mqtt",
         output="screen",
         parameters=[
@@ -88,7 +88,7 @@ def generate_launch_description():
     node_commands = Node(
         namespace=muto_namespace,
         name="commands_plugin",
-        package="agent",
+        package="muto_agent",
         executable="commands",
         output="screen",
         parameters=[
@@ -103,7 +103,7 @@ def generate_launch_description():
 
     symphony_provider = Node(
         namespace=muto_namespace,
-        package='agent',
+        package='muto_agent',
         executable='symphony_provider',
         name='muto_symphony_provider',
         output='screen',

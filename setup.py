@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 import os
 from glob import glob
 
-package_name = 'agent'
+package_name = 'muto_agent'
 
 setup(
     name=package_name,
@@ -20,13 +20,12 @@ setup(
     maintainer_email='info@composiv.ai',
     description='Eclipse Muto Agent - pluggable communication gateway bridging ROS 2 nodes with cloud backends via MQTT/Ditto and Symphony protocols',
     license='Eclipse Public License v2.0',
-    tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'muto_agent = agent.muto_agent:main',
-            'mqtt = agent.mqtt:main',
-            'commands = agent.commands:main',
-            'symphony_provider = agent.symphony.symphony_provider:main'
+            'muto_agent = muto_agent.muto_agent:main',
+            'mqtt = muto_agent.mqtt:main',
+            'commands = muto_agent.commands:main',
+            'symphony_provider = muto_agent.symphony.symphony_provider:main'
         ],
     },
     python_requires='>=3.8',

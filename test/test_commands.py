@@ -23,11 +23,11 @@ from unittest.mock import patch
 
 import rclpy
 
-import agent.commands
-from agent.command_executor import Command
-from agent.ros.node_commands import NodeCommands
-from agent.ros.topic_commands import TopicCommands
-from agent.ros.param_commands import ParamCommands
+import muto_agent.commands
+from muto_agent.command_executor import Command
+from muto_agent.ros.node_commands import NodeCommands
+from muto_agent.ros.topic_commands import TopicCommands
+from muto_agent.ros.param_commands import ParamCommands
 
 from muto_msgs.msg import MutoAction, MutoActionMeta, CommandInput, CommandOutput, PluginResponse
 from muto_msgs.srv import CommandPlugin
@@ -47,7 +47,7 @@ class TestCommandsPlugin(unittest.TestCase):
     def setUp(self):
         self.dummy_service_to_call = "rostopic_list"
         self.dummy_plugin = CommandPlugin  # Use the actual service type, not string
-        self.node = agent.commands.ROSCommandsPlugin()
+        self.node = muto_agent.commands.ROSCommandsPlugin()
         # Initialize the node to set up configuration and parameters
         try:
             self.node.initialize()
@@ -69,7 +69,7 @@ class TestCommandsPlugin(unittest.TestCase):
     def test_commands_node_create(self):
         assert self.node != None, "Node couldn't be created."
 
-    @patch("agent.commands.Command")
+    @patch("muto_agent.commands.Command")
     def test_agent_msg_callback(self, MockCommand):
         meta_msg = MutoActionMeta()
         meta_msg.response_topic = "muto/org.eclipse.muto.sandbox:f1tenth"
@@ -143,7 +143,7 @@ class TestCommand(unittest.TestCase):
     def setUp(self):
         self.dummy_service_to_call = "rosnode_list"
         self.dummy_plugin = CommandPlugin  # Use the actual service type, not string
-        self.commnands_plugin_node = agent.commands.ROSCommandsPlugin()
+        self.commnands_plugin_node = muto_agent.commands.ROSCommandsPlugin()
         self.command = Command(self.commnands_plugin_node, self.dummy_service_to_call, self.dummy_plugin)
 
     def tearDown(self):
@@ -169,13 +169,13 @@ class TestNodeCommands(unittest.TestCase):
         rclpy.shutdown()
 
     def setUp(self):
-        self.commnands_plugin_node = agent.commands.ROSCommandsPlugin()
+        self.commnands_plugin_node = muto_agent.commands.ROSCommandsPlugin()
         self.node_commands = NodeCommands(self.commnands_plugin_node)
 
     def tearDown(self):
         self.commnands_plugin_node.destroy_node()
 
-    @patch("agent.ros.node_commands.NodeCommands.get_discovered_nodes")
+    @patch("muto_agent.ros.node_commands.NodeCommands.get_discovered_nodes")
     def test_callback_rosnode_list_wo_nodes(self, get_discovered_nodes):
         req = CommandPlugin.Request()
         res = CommandPlugin.Response()
@@ -196,8 +196,8 @@ class TestNodeCommands(unittest.TestCase):
         assert result.output.payload == '{"nodes": []}'
         assert result.output.result == expected_response
 
-    @patch("agent.ros.node_commands.NodeCommands.get_node_info")
-    @patch("agent.ros.node_commands.NodeCommands.get_discovered_nodes")
+    @patch("muto_agent.ros.node_commands.NodeCommands.get_node_info")
+    @patch("muto_agent.ros.node_commands.NodeCommands.get_discovered_nodes")
     def test_callback_rosnode_list_w_nodes(self, get_discovered_nodes, get_node_info):
         req = CommandPlugin.Request()
         res = CommandPlugin.Response()
@@ -257,7 +257,7 @@ class TestParamCommands(unittest.TestCase):
         rclpy.shutdown()
 
     def setUp(self):
-        self.commnands_plugin_node = agent.commands.ROSCommandsPlugin()
+        self.commnands_plugin_node = muto_agent.commands.ROSCommandsPlugin()
         self.param_commands = ParamCommands(self.commnands_plugin_node)
 
     def tearDown(self):
@@ -332,14 +332,14 @@ class TestTopicCommands(unittest.TestCase):
         rclpy.shutdown()
 
     def setUp(self):
-        self.commnands_plugin_node = agent.commands.ROSCommandsPlugin()
+        self.commnands_plugin_node = muto_agent.commands.ROSCommandsPlugin()
         self.topic_commands = TopicCommands(self.commnands_plugin_node)
 
     def tearDown(self):
         self.commnands_plugin_node.destroy_node()
 
-    @patch("agent.ros.topic_commands.TopicCommands.construct_subscribers")
-    @patch("agent.ros.topic_commands.TopicCommands.construct_publishers")
+    @patch("muto_agent.ros.topic_commands.TopicCommands.construct_subscribers")
+    @patch("muto_agent.ros.topic_commands.TopicCommands.construct_publishers")
     def test_callback_rostopic_list(self, pubs_func, subs_func):
         req = CommandPlugin.Request()
         res = CommandPlugin.Response()
@@ -386,7 +386,7 @@ class TestTopicCommands(unittest.TestCase):
         assert result.output.payload == json.dumps(expected_payload)
         assert result.output.result == expected_response
 
-    @patch("agent.ros.topic_commands.TopicCommands.get_topic_info")
+    @patch("muto_agent.ros.topic_commands.TopicCommands.get_topic_info")
     def test_callback_rostopic_info(self, topic_info):
         req = CommandPlugin.Request()
         res = CommandPlugin.Response()

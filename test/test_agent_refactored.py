@@ -23,10 +23,10 @@ from unittest.mock import Mock, patch
 import json
 
 import rclpy
-import agent.muto_agent
-from agent.config import ConfigurationManager
-from agent.topic_parser import MutoTopicParser
-from agent.interfaces import BaseNode
+import muto_agent.muto_agent
+from muto_agent.config import ConfigurationManager
+from muto_agent.topic_parser import MutoTopicParser
+from muto_agent.interfaces import BaseNode
 from muto_msgs.msg import MutoAction, CommandOutput
 
 
@@ -41,7 +41,7 @@ class TestAgentNode(unittest.TestCase):
 
     def setUp(self):
         # Create node without full initialization to avoid MQTT/service dependencies
-        self.node = agent.muto_agent.MutoAgent()
+        self.node = muto_agent.muto_agent.MutoAgent()
 
     def tearDown(self):
         try:
@@ -55,7 +55,7 @@ class TestAgentNode(unittest.TestCase):
 
     def test_node_has_topic_parser(self):
         # Initialize just the topic parser for testing
-        from agent.topic_parser import MutoTopicParser
+        from muto_agent.topic_parser import MutoTopicParser
         self.node._topic_parser = MutoTopicParser()
         
         # Test that node has a topic parser
@@ -74,7 +74,7 @@ class TestAgentNode(unittest.TestCase):
         mock_node.get_parameter.return_value.value = None
         
         # Create a simpler mock that handles parameter access
-        from agent.config import AgentConfig, MQTTConfig, TopicConfig
+        from muto_agent.config import AgentConfig, MQTTConfig, TopicConfig
         simple_config = AgentConfig(
             mqtt=MQTTConfig(
                 host="localhost",

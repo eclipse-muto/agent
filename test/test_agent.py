@@ -22,7 +22,7 @@ import unittest
 import json
 
 import rclpy
-import agent.muto_agent
+import muto_agent.muto_agent
 from muto_msgs.msg import Gateway, MutoAction, MutoActionMeta
 
 
@@ -36,7 +36,7 @@ class TestAgentNode(unittest.TestCase):
         rclpy.shutdown()
 
     def setUp(self):
-        self.node = agent.muto_agent.MutoAgent()
+        self.node = muto_agent.muto_agent.MutoAgent()
         # Initialize the node to setup configuration and parameters
         try:
             self.node.initialize()

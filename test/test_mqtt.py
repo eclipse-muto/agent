@@ -24,7 +24,7 @@ import json
 
 import rclpy
 
-import agent.mqtt
+import muto_agent.mqtt
 from muto_msgs.msg import Gateway, Thing
 
 
@@ -38,7 +38,7 @@ class TestMQTTNode(unittest.TestCase):
         rclpy.shutdown()
 
     def setUp(self):
-        self.node = agent.mqtt.MQTT()
+        self.node = muto_agent.mqtt.MQTT()
         # Initialize the node to set up configuration and parameters
         try:
             self.node.initialize()
