@@ -1,27 +1,70 @@
-name: Colcon Build and Test
+name: CI
 
-on: [push]
+on:
+  push:
+    branches: [main, chore/*, feat/*, fix/*]
+  pull_request:
+    branches: [main]
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    container: osrf/ros:humble-desktop
+  build-and-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        ros_distro: [humble, jazzy]
+        include:
+          - ros_distro: humble
+            os: ubuntu-22.04
+          - ros_distro: jazzy
+            os: ubuntu-24.04
+    runs-on: ${{ matrix.os }}
+    container: osrf/ros:${{ matrix.ros_distro }}-desktop
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - run: |
-          mkdir -p $(pwd)/tmp/muto/src/
-          ln -s $(pwd) $(pwd)/tmp/muto/src/agent
-          cd $(pwd)/tmp/muto
+      - name: Clone muto_msgs
+        run: |
+          mkdir -p /tmp/ws/src
+          ln -s $GITHUB_WORKSPACE /tmp/ws/src/agent
+          git clone https://github.com/eclipse-muto/messages.git /tmp/ws/src/messages
+
+      - name: Install dependencies
+        run: |
           apt-get update -y
-          apt-get install python3-pip -y
-          pip3 install setuptools==58.2.0
-          . /opt/ros/humble/setup.sh
-          rosdep update -y
-          rosdep install --from-path src --ignore-src -r -y --rosdistro humble
-          colcon build
+          apt-get install -y python3-pip
+          cd /tmp/ws
+          . /opt/ros/${{ matrix.ros_distro }}/setup.sh
+          rosdep update
+          rosdep install --from-paths src --ignore-src -r -y --rosdistro ${{ matrix.ros_distro }}
+          pip3 install src/agent/symphony-sdk-python/
+
+      - name: Build
+        run: |
+          cd /tmp/ws
+          . /opt/ros/${{ matrix.ros_distro }}/setup.sh
+          colcon build --packages-select muto_msgs muto_agent
+
+      - name: Test
+        run: |
+          cd /tmp/ws
+          . /opt/ros/${{ matrix.ros_distro }}/setup.sh
           . install/setup.sh
-          # colcon test
-          # colcon test-result --all --verbose
-        name: Agent ROS2 Humble container build
+          colcon test --packages-select muto_agent --event-handlers console_direct+
+          colcon test-result --verbose
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - run: pip install ruff mypy
+      - name: Ruff check
+        run: ruff check .
+      - name: Ruff format check
+        run: ruff format --check .
+      - name: Mypy
+        run: mypy muto_agent/
+        continue-on-error: true
