@@ -28,15 +28,5 @@ setup(
             'symphony_provider = muto_agent.symphony.symphony_provider:main'
         ],
     },
-    python_requires='>=3.8',
-    classifiers=[
-        'Development Status :: 4 - Beta',
-        'Intended Audience :: Developers',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.8',
-        'Programming Language :: Python :: 3.9',
-        'Programming Language :: Python :: 3.10',
-        'Topic :: Software Development :: Libraries :: Python Modules',
-        'Topic :: Scientific/Engineering :: Interface Engine/Protocol Translator',
-    ],
+    python_requires='>=3.10',
 )
