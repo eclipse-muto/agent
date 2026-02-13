@@ -25,7 +25,7 @@ jobs:
       - name: Install dependencies
         run: |
           apt-get update -y
-          apt-get install -y python3-pip python3-colcon-common-extensions git
+          apt-get install -y python3-pip python3-colcon-common-extensions python3-pytest git
           cd /tmp/ws
           . /opt/ros/foxy/setup.sh
           rosdep update
