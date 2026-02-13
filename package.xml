@@ -23,6 +23,7 @@
   <depend>muto_msgs</depend>
   <depend>ackermann_msgs</depend>
   <depend>python-paho-mqtt-pip</depend>
+  <depend>python3-requests</depend>
 
   <export>
     <build_type>ament_python</build_type>
