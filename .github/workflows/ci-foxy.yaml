@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     container: ros:foxy-ros-base
     env:
       PIP_BREAK_SYSTEM_PACKAGES: "1"
@@ -43,5 +43,4 @@ jobs:
           cd /tmp/ws
           . /opt/ros/foxy/setup.sh
           . install/setup.sh
-          colcon test --packages-select muto_agent --event-handlers console_direct+
-          colcon test-result --verbose
+          python -m pytest src/agent/test/ -v
