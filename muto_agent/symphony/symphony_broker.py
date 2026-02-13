@@ -84,9 +84,7 @@ class MQTTBroker:
         self.logger.info(f"Symphony router connected to MQTT broker with result code {reason_code}")
 
         # Subscribe to Symphony request topic
-        request_topic = (
-            f"{self._config.symphony.topic_prefix}/{self._config.symphony.request_topic}"
-        )
+        request_topic = f"{self._config.symphony.topic_prefix}/{self._config.symphony.request_topic}"
         topics = [request_topic]
 
         # Subscribe to request topics
@@ -109,9 +107,7 @@ class MQTTBroker:
             message: The MQTT message to handle.
         """
         # Symphony action response topic
-        response_topic = (
-            f"{self._config.symphony.topic_prefix}/{self._config.symphony.response_topic}"
-        )
+        response_topic = f"{self._config.symphony.topic_prefix}/{self._config.symphony.response_topic}"
 
         try:
             topic = message.topic
@@ -154,9 +150,7 @@ class MQTTBroker:
 
             self._mqtt_manager.publish(response_topic, serialize_coa_response(error_response))
 
-    def _handle_request(
-        self, metadata: dict[str, Any], method: str, route: str, body: dict[str, Any]
-    ) -> Any:
+    def _handle_request(self, metadata: dict[str, Any], method: str, route: str, body: dict[str, Any]) -> Any:
         """
         Handle COA request by routing to appropriate handler.
 

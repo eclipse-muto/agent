@@ -11,6 +11,7 @@
 #   Composiv.ai - initial API and implementation
 #
 
+import contextlib
 import json
 import unittest
 
@@ -39,14 +40,12 @@ class TestAgentNode(unittest.TestCase):
             pass
 
     def tearDown(self):
-        try:
+        with contextlib.suppress(BaseException):
             self.node.cleanup()
-        except:
-            pass
         self.node.destroy_node()
 
     def test_mqtt_node_create(self):
-        assert self.node != None, "Node couldn't be created."
+        assert self.node is not None, "Node couldn't be created."
 
     def test_gateway_msg_callback_ping(self):
         meta_msg = MutoActionMeta()

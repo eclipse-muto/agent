@@ -98,9 +98,7 @@ class MutoSymphonyProvider(BaseNode, SymphonyProvider):
     def _do_initialize(self) -> None:
 
         # Create ROS services for Symphony registration
-        self._register_service = self.create_service(
-            Trigger, "symphony_register_target", self._register_target_service
-        )
+        self._register_service = self.create_service(Trigger, "symphony_register_target", self._register_target_service)
 
         self._unregister_service = self.create_service(
             Trigger, "symphony_unregister_target", self._unregister_target_service
@@ -247,17 +245,13 @@ class MutoSymphonyProvider(BaseNode, SymphonyProvider):
                 if success:
                     self.logger.info("Auto-registration with Symphony completed successfully")
                 else:
-                    self.logger.warn(
-                        "Auto-registration with Symphony failed, will not retry automatically"
-                    )
+                    self.logger.warn("Auto-registration with Symphony failed, will not retry automatically")
             else:
                 self.logger.info("MQTT broker not available for auto-registration")
         except Exception as e:
             self.logger.error(f"Error in auto-registration: {e}")
 
-    def _register_target_service(
-        self, request: Trigger.Request, response: Trigger.Response
-    ) -> Trigger.Response:
+    def _register_target_service(self, request: Trigger.Request, response: Trigger.Response) -> Trigger.Response:
         """
         ROS service callback to register target with Symphony.
 
@@ -271,18 +265,12 @@ class MutoSymphonyProvider(BaseNode, SymphonyProvider):
         success = self.register_target()
         response.success = success
         if success:
-            response.message = (
-                f"Successfully registered target '{self._config.symphony.target}' with Symphony"
-            )
+            response.message = f"Successfully registered target '{self._config.symphony.target}' with Symphony"
         else:
-            response.message = (
-                f"Failed to register target '{self._config.symphony.target}' with Symphony"
-            )
+            response.message = f"Failed to register target '{self._config.symphony.target}' with Symphony"
         return response
 
-    def _unregister_target_service(
-        self, request: Trigger.Request, response: Trigger.Response
-    ) -> Trigger.Response:
+    def _unregister_target_service(self, request: Trigger.Request, response: Trigger.Response) -> Trigger.Response:
         """
         ROS service callback to unregister target from Symphony.
 
@@ -296,13 +284,9 @@ class MutoSymphonyProvider(BaseNode, SymphonyProvider):
         success = self.unregister_target()
         response.success = success
         if success:
-            response.message = (
-                f"Successfully unregistered target '{self._config.symphony.target}' from Symphony"
-            )
+            response.message = f"Successfully unregistered target '{self._config.symphony.target}' from Symphony"
         else:
-            response.message = (
-                f"Failed to unregister target '{self._config.symphony.target}' from Symphony"
-            )
+            response.message = f"Failed to unregister target '{self._config.symphony.target}' from Symphony"
         return response
 
     # SymphonyProvider Interface Methods
@@ -310,9 +294,7 @@ class MutoSymphonyProvider(BaseNode, SymphonyProvider):
 
     def init_provider(self):
         """Initialize the provider - required by MQTTBroker interface."""
-        self.logger.info(
-            f"Muto Symphony Provider initialized - Target: {self._config.symphony.target}"
-        )
+        self.logger.info(f"Muto Symphony Provider initialized - Target: {self._config.symphony.target}")
         # Auto-register target after initialization
         self.register_target()
 
@@ -366,9 +348,7 @@ class MutoSymphonyProvider(BaseNode, SymphonyProvider):
             if not published:
                 failures += 1
                 component_result.status = State.MQTT_PUBLISH_FAILED
-                component_result.message = (
-                    f"Failed to publish apply action for component {component_name}"
-                )
+                component_result.message = f"Failed to publish apply action for component {component_name}"
                 target_result.component_results[component_name] = component_result
                 self.logger.error(component_result.message)
                 # Do NOT update _component_registry on failed publish
@@ -432,9 +412,7 @@ class MutoSymphonyProvider(BaseNode, SymphonyProvider):
 
             component_result = ComponentResultSpec()
 
-            stack_payload, decode_error = self._extract_stack_payload(
-                component, allow_registry_lookup=True
-            )
+            stack_payload, decode_error = self._extract_stack_payload(component, allow_registry_lookup=True)
 
             if decode_error:
                 failures += 1
@@ -454,9 +432,7 @@ class MutoSymphonyProvider(BaseNode, SymphonyProvider):
             if not published:
                 failures += 1
                 component_result.status = State.DELETE_FAILED
-                component_result.message = (
-                    f"Failed to publish remove action for component {component_name}"
-                )
+                component_result.message = f"Failed to publish remove action for component {component_name}"
                 target_result.component_results[component_name] = component_result
                 self.logger.error(component_result.message)
                 # Do NOT modify _component_registry on failed publish
@@ -529,9 +505,7 @@ class MutoSymphonyProvider(BaseNode, SymphonyProvider):
                 reported_components.append(component_info)
             except (KeyError, TypeError) as exc:
                 # Failed to retrieve component state - do not persist stale data
-                self.logger.warning(
-                    f"Failed to retrieve state for component {component_name}: {exc}"
-                )
+                self.logger.warning(f"Failed to retrieve state for component {component_name}: {exc}")
                 continue
 
         return json.dumps(reported_components, indent=2)
@@ -615,9 +589,7 @@ class MutoSymphonyProvider(BaseNode, SymphonyProvider):
             msg_action.payload = payload_str
 
             self.stack_publisher.publish(msg_action)
-            self.logger.debug(
-                f"Published stack action '{method}' with payload length {len(payload_str)}"
-            )
+            self.logger.debug(f"Published stack action '{method}' with payload length {len(payload_str)}")
             return True
         except Exception as exc:
             self.logger.error(f"Failed to publish stack action '{method}': {exc}")
@@ -634,9 +606,7 @@ class MutoSymphonyProvider(BaseNode, SymphonyProvider):
         Returns:
             True if updates are needed, False otherwise.
         """
-        self.logger.info(
-            f"Checking update need for {len(pack.desired)} desired vs {len(pack.current)} current"
-        )
+        self.logger.info(f"Checking update need for {len(pack.desired)} desired vs {len(pack.current)} current")
 
         # Create lookup for current components
         current_by_name = {comp.name: comp for comp in pack.current}
@@ -660,9 +630,7 @@ class MutoSymphonyProvider(BaseNode, SymphonyProvider):
 
     def needs_remove(self, metadata: dict[str, Any], pack: ComparisonPack) -> bool:
         """Check if components need removal by comparing desired vs current state."""
-        self.logger.info(
-            f"Checking removal need for {len(pack.desired)} desired vs {len(pack.current)} current"
-        )
+        self.logger.info(f"Checking removal need for {len(pack.desired)} desired vs {len(pack.current)} current")
 
         # Create lookup for desired components
         desired_by_name = {comp.name: comp for comp in pack.desired}
@@ -698,10 +666,7 @@ class MutoSymphonyProvider(BaseNode, SymphonyProvider):
             return True
 
         # Dependencies change
-        if desired.dependencies != current.dependencies:
-            return True
-
-        return False
+        return desired.dependencies != current.dependencies
 
     def start(self) -> bool:
         """Start the Symphony provider."""

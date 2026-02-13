@@ -140,12 +140,8 @@ class ConfigurationManager:
                 enabled=self._get_parameter("symphony_enabled", False),
                 topic_prefix=self._get_parameter("symphony_topic_prefix", "symphony"),
                 api_url=self._get_parameter("symphony_api_url", "http://localhost:8082/v1alpha2/"),
-                provider_name=self._get_parameter(
-                    "symphony_provider_name", "providers.target.mqtt"
-                ),
-                broker_address=self._get_parameter(
-                    "symphony_broker_address", "tcp://mosquitto:1883"
-                ),
+                provider_name=self._get_parameter("symphony_provider_name", "providers.target.mqtt"),
+                broker_address=self._get_parameter("symphony_broker_address", "tcp://mosquitto:1883"),
                 client_id=self._get_parameter("symphony_client_id", "symphony"),
                 request_topic=self._get_parameter("symphony_request_topic", "coa-request"),
                 response_topic=self._get_parameter("symphony_response_topic", "coa-response"),
@@ -157,24 +153,14 @@ class ConfigurationManager:
             topic_config = TopicConfig(
                 stack_topic=self._get_parameter("stack_topic", "stack"),
                 twin_topic=self._get_parameter("twin_topic", "twin"),
-                agent_to_gateway_topic=self._get_parameter(
-                    "agent_to_gateway_topic", "agent_to_gateway"
-                ),
-                gateway_to_agent_topic=self._get_parameter(
-                    "gateway_to_agent_topic", "gateway_to_agent"
-                ),
-                agent_to_commands_topic=self._get_parameter(
-                    "agent_to_commands_topic", "agent_to_command"
-                ),
-                commands_to_agent_topic=self._get_parameter(
-                    "commands_to_agent_topic", "command_to_agent"
-                ),
+                agent_to_gateway_topic=self._get_parameter("agent_to_gateway_topic", "agent_to_gateway"),
+                gateway_to_agent_topic=self._get_parameter("gateway_to_agent_topic", "gateway_to_agent"),
+                agent_to_commands_topic=self._get_parameter("agent_to_commands_topic", "agent_to_command"),
+                commands_to_agent_topic=self._get_parameter("commands_to_agent_topic", "command_to_agent"),
                 thing_messages_topic=self._get_parameter("thing_messages_topic", "thing_messages"),
             )
 
-            self._config = AgentConfig(
-                mqtt=mqtt_config, topics=topic_config, symphony=symphony_config
-            )
+            self._config = AgentConfig(mqtt=mqtt_config, topics=topic_config, symphony=symphony_config)
             self._validate_config()
 
             self._node.get_logger().info("Configuration loaded successfully")
@@ -257,9 +243,7 @@ class ConfigurationManager:
         try:
             return self._node.get_parameter(name).value
         except Exception:
-            self._node.get_logger().warning(
-                f"Failed to get parameter '{name}', using default: {default}"
-            )
+            self._node.get_logger().warning(f"Failed to get parameter '{name}', using default: {default}")
             return default
 
     def _validate_config(self) -> None:

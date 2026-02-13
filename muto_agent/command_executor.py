@@ -60,14 +60,10 @@ class Command:
             self._client = self._node.create_client(self._plugin_type, self._service_name)
             self._node.get_logger().debug(f"Service client created for {self._service_name}")
         except Exception as e:
-            self._node.get_logger().error(
-                f"Failed to create service client for {self._service_name}: {e}"
-            )
+            self._node.get_logger().error(f"Failed to create service client for {self._service_name}: {e}")
             raise ConfigurationError(f"Service client creation failed: {e}") from e
 
-    def execute(
-        self, method: str, payload: str, meta: Any, callback: Callable | None = None
-    ) -> Future | None:
+    def execute(self, method: str, payload: str, meta: Any, callback: Callable | None = None) -> Future | None:
         """
         Execute the command asynchronously.
 
@@ -103,9 +99,7 @@ class Command:
             if callback:
                 future.add_done_callback(lambda f: callback(f, payload, meta))
 
-            self._node.get_logger().debug(
-                f"Command {method} executed on service {self._service_name}"
-            )
+            self._node.get_logger().debug(f"Command {method} executed on service {self._service_name}")
             return future
 
         except Exception as e:
@@ -162,9 +156,7 @@ class CommandRegistry:
             # Create command objects
             self._create_command_objects(commands_dict)
 
-            self._node.get_logger().info(
-                f"Loaded {len(self._commands)} commands from configuration"
-            )
+            self._node.get_logger().info(f"Loaded {len(self._commands)} commands from configuration")
 
         except Exception as e:
             raise ConfigurationError(f"Failed to load commands: {e}") from e
@@ -226,9 +218,7 @@ class CommandRegistry:
                 self._node.get_logger().debug(f"Registered command: {name}")
 
             except Exception as e:
-                self._node.get_logger().error(
-                    f"Failed to create command from config {command_config}: {e}"
-                )
+                self._node.get_logger().error(f"Failed to create command from config {command_config}: {e}")
 
     def get_command(self, name: str) -> Command:
         """

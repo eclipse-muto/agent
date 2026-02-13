@@ -31,12 +31,8 @@ class ParamCommands:
     def __init__(self, node):
         self.node = node
 
-        self.rosparam_list = self.node.create_service(
-            CommandPlugin, "rosparam_list", self.callback_rosparam_list
-        )
-        self.rosparam_get = self.node.create_service(
-            CommandPlugin, "rosparam_get", self.callback_rosparam_get
-        )
+        self.rosparam_list = self.node.create_service(CommandPlugin, "rosparam_list", self.callback_rosparam_list)
+        self.rosparam_get = self.node.create_service(CommandPlugin, "rosparam_get", self.callback_rosparam_get)
 
     def callback_rosparam_list(self, request, response):
         """
@@ -88,7 +84,7 @@ class ParamCommands:
         try:
             value = self.node.get_parameter(requested_param).value
             result = {"name": requested_param, "value": value}
-        except:
+        except Exception:
             self.node.get_logger().error(f"{requested_param} not found.")
 
         response.output = self.node.construct_command_output_message(result)

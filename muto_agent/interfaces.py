@@ -17,6 +17,7 @@ Base interfaces and abstract classes for the Muto Agent system.
 
 from __future__ import annotations
 
+import contextlib
 from abc import ABC, abstractmethod
 from typing import Any
 
@@ -189,17 +190,11 @@ class BaseNode(Node, ResourceManager):
             self._do_cleanup()
             self._resources_cleaned = True
             # Only log if the node handle is still valid
-            try:
+            with contextlib.suppress(Exception):
                 self.get_logger().info(f"Node {self.get_name()} cleaned up successfully")
-            except:
-                # Node handle is already destroyed, skip logging
-                pass
         except Exception as e:
-            try:
+            with contextlib.suppress(Exception):
                 self.get_logger().error(f"Failed to cleanup node {self.get_name()}: {e}")
-            except:
-                # Node handle is already destroyed, skip logging
-                pass
 
     def __del__(self):
         """Destructor to ensure cleanup."""

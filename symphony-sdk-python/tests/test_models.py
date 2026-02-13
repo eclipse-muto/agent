@@ -42,9 +42,7 @@ class TestObjectMeta(unittest.TestCase):
         """Test ObjectMeta creation with specific values."""
         labels = {"app": "test", "version": "1.0"}
         annotations = {"description": "test object"}
-        meta = ObjectMeta(
-            name="test-object", namespace="test-namespace", labels=labels, annotations=annotations
-        )
+        meta = ObjectMeta(name="test-object", namespace="test-namespace", labels=labels, annotations=annotations)
         self.assertEqual(meta.name, "test-object")
         self.assertEqual(meta.namespace, "test-namespace")
         self.assertEqual(meta.labels, labels)
@@ -66,9 +64,7 @@ class TestComponentSpec(unittest.TestCase):
     def test_component_spec_with_values(self):
         """Test ComponentSpec creation with specific values."""
         properties = {"key1": "value1", "key2": "value2"}
-        comp = ComponentSpec(
-            name="test-component", type="service", constraints="cpu=2", properties=properties
-        )
+        comp = ComponentSpec(name="test-component", type="service", constraints="cpu=2", properties=properties)
 
         self.assertEqual(comp.name, "test-component")
         self.assertEqual(comp.type, "service")
@@ -104,9 +100,7 @@ class TestDeploymentSpec(unittest.TestCase):
         solution_spec = SolutionSpec(components=[comp1, comp2, comp3])
         solution_state = SolutionState(spec=solution_spec)
 
-        deployment = DeploymentSpec(
-            solution=solution_state, componentStartIndex=1, componentEndIndex=3
-        )
+        deployment = DeploymentSpec(solution=solution_state, componentStartIndex=1, componentEndIndex=3)
 
         components = deployment.get_components_slice()
         self.assertEqual(len(components), 2)
@@ -215,9 +209,7 @@ class TestCOARequest(unittest.TestCase):
         metadata = {"version": "1.0"}
         parameters = {"param1": "value1"}
 
-        request = COARequest(
-            method="POST", route="/api/v1/deploy", metadata=metadata, parameters=parameters
-        )
+        request = COARequest(method="POST", route="/api/v1/deploy", metadata=metadata, parameters=parameters)
 
         self.assertEqual(request.method, "POST")
         self.assertEqual(request.route, "/api/v1/deploy")
@@ -226,9 +218,7 @@ class TestCOARequest(unittest.TestCase):
 
     def test_coa_request_to_json_dict(self):
         """Test COARequest to_json_dict conversion."""
-        request = COARequest(
-            method="PUT", route="/test", metadata={"key": "value"}, parameters={"param": "test"}
-        )
+        request = COARequest(method="PUT", route="/test", metadata={"key": "value"}, parameters={"param": "test"})
         request.set_body({"data": "test"})
 
         json_dict = request.to_json_dict()
@@ -290,9 +280,7 @@ class TestCOAResponse(unittest.TestCase):
 
     def test_coa_response_to_json_dict(self):
         """Test COAResponse to_json_dict conversion."""
-        response = COAResponse(
-            state=State.OK, metadata={"version": "1.0"}, redirect_uri="https://example.com/redirect"
-        )
+        response = COAResponse(state=State.OK, metadata={"version": "1.0"}, redirect_uri="https://example.com/redirect")
         response.set_body({"status": "ok"})
 
         json_dict = response.to_json_dict()

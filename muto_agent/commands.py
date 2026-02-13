@@ -135,7 +135,7 @@ class ROSCommandsPlugin(Node):
         try:
             self.declare_parameter("agent_to_commands_topic", "msg_3")
             self.declare_parameter("commands_to_agent_topic", "msg4")
-        except:
+        except Exception:
             pass
 
         # Initialize Parameters
@@ -146,9 +146,7 @@ class ROSCommandsPlugin(Node):
 
         # ROS Related
         self.pub_agent = self.create_publisher(MutoAction, self.commands_to_agent_topic, 10)
-        self.sub_agent = self.create_subscription(
-            MutoAction, self.agent_to_commands_topic, self.agent_msg_callback, 10
-        )
+        self.sub_agent = self.create_subscription(MutoAction, self.agent_to_commands_topic, self.agent_msg_callback, 10)
 
         # Command Service Definitions
         NodeCommands(self)
@@ -205,7 +203,6 @@ class ROSCommandsPlugin(Node):
         Args:
             data: The agent message data object.
         """
-        context = data.context
         method = data.method
         payload = data.payload
         meta = data.meta

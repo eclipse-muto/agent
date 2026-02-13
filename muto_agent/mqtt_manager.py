@@ -106,15 +106,11 @@ class MQTTConnectionManager(ConnectionManager):
             raise ConnectionError("MQTT client not initialized")
 
         try:
-            result_code = self._client.connect(
-                self._config.host, self._config.port, self._config.keep_alive
-            )
+            result_code = self._client.connect(self._config.host, self._config.port, self._config.keep_alive)
 
             if result_code == 0:
                 self._client.loop_start()
-                self.get_logger().info(
-                    f"MQTT connection established to {self._config.host}:{self._config.port}"
-                )
+                self.get_logger().info(f"MQTT connection established to {self._config.host}:{self._config.port}")
                 return True
             else:
                 raise ConnectionError(f"MQTT connection failed with code: {result_code}")
@@ -192,9 +188,7 @@ class MQTTConnectionManager(ConnectionManager):
                 self.get_logger().info(f"Subscribed to topic: {topic}")
                 return True
             else:
-                self.get_logger().error(
-                    f"Failed to subscribe to topic {topic}, return code: {result}"
-                )
+                self.get_logger().error(f"Failed to subscribe to topic {topic}, return code: {result}")
                 return False
 
         except Exception as e:
@@ -308,9 +302,7 @@ class DittoMessageHandler(MessageHandler):
         """
         try:
             # Parse basic message properties
-            topic = message.topic
             payload = message.payload.decode("utf-8")
-            properties = message.properties
 
             # Parse JSON payload
             thing_message = json.loads(payload)
@@ -318,8 +310,8 @@ class DittoMessageHandler(MessageHandler):
             # Extract message components
             thing_topic = thing_message.get("topic", "")
             headers = thing_message.get("headers", {})
-            path = thing_message.get("path", "")
-            value = thing_message.get("value", "")
+            thing_message.get("path", "")
+            thing_message.get("value", "")
 
             # Create metadata
             meta = self._create_meta_from_headers(headers)
@@ -400,9 +392,7 @@ class DittoMessageHandler(MessageHandler):
                     else:
                         self._thing_publisher(thing_message, channel, action_parts[0], meta)
                 else:
-                    self._thing_publisher(
-                        thing_message, channel, action_parts[0] if action_parts else "", meta
-                    )
+                    self._thing_publisher(thing_message, channel, action_parts[0] if action_parts else "", meta)
             else:
                 self._error_publisher(
                     meta,

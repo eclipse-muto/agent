@@ -17,16 +17,16 @@ import time
 from typing import Any
 
 # Third-party imports
-from ackermann_msgs.msg import *
-from diagnostic_msgs.msg import *
-from geometry_msgs.msg import *
-from muto_msgs.msg import *
+from ackermann_msgs.msg import *  # noqa: F403
+from diagnostic_msgs.msg import *  # noqa: F403
+from geometry_msgs.msg import *  # noqa: F403
+from muto_msgs.msg import *  # noqa: F403
 from muto_msgs.srv import CommandPlugin, CoreTwin
-from nav_msgs.msg import *
+from nav_msgs.msg import *  # noqa: F403
 from rclpy.node import Node
-from sensor_msgs.msg import *
-from std_msgs.msg import *
-from tf2_msgs.msg import *
+from sensor_msgs.msg import *  # noqa: F403
+from std_msgs.msg import *  # noqa: F403
+from tf2_msgs.msg import *  # noqa: F403
 
 # Local imports
 from muto_agent.ros.msg_converter import json_message_converter
@@ -106,7 +106,7 @@ class TopicEcho:
         self.subscribe()
 
     def stop(self):
-        if self.sub != None:
+        if self.sub is not None:
             self.node.destroy_subscription(self.sub)
             self.sub = None
 
@@ -115,9 +115,7 @@ class TopicEcho:
         self.delete_telemetry()
 
     def subscribe(self):
-        self.sub = self.node.create_subscription(
-            self.ros_topic_type, self.ros_topic, self.topic_callback, 1
-        )
+        self.sub = self.node.create_subscription(self.ros_topic_type, self.ros_topic, self.topic_callback, 1)
 
     def topic_callback(self, data):
         message_time = time.time()
@@ -137,15 +135,9 @@ class TopicCommands:
 
         self.echoed_nodes = {}
 
-        self.rostopic_list = self.node.create_service(
-            CommandPlugin, "rostopic_list", self.callback_rostopic_list
-        )
-        self.rostopic_info = self.node.create_service(
-            CommandPlugin, "rostopic_info", self.callback_rostopic_info
-        )
-        self.rostopic_echo = self.node.create_service(
-            CommandPlugin, "rostopic_echo", self.callback_rostopic_echo
-        )
+        self.rostopic_list = self.node.create_service(CommandPlugin, "rostopic_list", self.callback_rostopic_list)
+        self.rostopic_info = self.node.create_service(CommandPlugin, "rostopic_info", self.callback_rostopic_info)
+        self.rostopic_echo = self.node.create_service(CommandPlugin, "rostopic_echo", self.callback_rostopic_echo)
 
     def callback_rostopic_list(self, request, response):
         """
@@ -192,7 +184,7 @@ class TopicCommands:
 
         requested_topic = payload.get("topic", None)
 
-        if requested_topic != None:
+        if requested_topic is not None:
             result = self.get_topic_info(requested_topic)
 
         response.output = self.node.construct_command_output_message(result)
@@ -204,7 +196,7 @@ class TopicCommands:
         payload = json.loads(request.input.payload)["value"]
         ros_topic_to_echo = payload["topic"]
         action = payload["action"]
-        rate = payload["rate"]
+        payload["rate"]
         meta = payload["target"]
 
         topics = self.node.get_topic_names_and_types()
@@ -235,7 +227,7 @@ class TopicCommands:
                         self.echoed_nodes[ros_topic_to_echo] = topic_echo
                     echoed_node = self.echoed_nodes[ros_topic_to_echo]
                     echoed_node.delete()
-                    if self.echoed_nodes != None:
+                    if self.echoed_nodes is not None:
                         self.echoed_nodes.pop(ros_topic_to_echo)
                     status = {"status": "DELETED", "topic": ros_topic_to_echo}
 
@@ -325,12 +317,12 @@ class TopicCommands:
 
         for publisher in publishers:
             info["pubs"].append({"publisher": publisher.node_name})
-            if info["types"] == None:
+            if info["types"] is None:
                 info["types"] = publisher.topic_type
 
         for subscription in subscriptions:
             info["subs"].append({"subscriber": subscription.node_name})
-            if info["types"] == None:
+            if info["types"] is None:
                 info["types"] = subscription.topic_type
 
         return info

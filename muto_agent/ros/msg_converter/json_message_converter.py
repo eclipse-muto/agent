@@ -40,9 +40,7 @@ def convert_json_to_ros_message(message_type, json_message, strict_mode=True):
         std_msgs.msg.String(data='Hello, Robot')
     """
     dictionary = json.loads(json_message)
-    return message_converter.convert_dictionary_to_ros_message(
-        message_type, dictionary, strict_mode=strict_mode
-    )
+    return message_converter.convert_dictionary_to_ros_message(message_type, dictionary, strict_mode=strict_mode)
 
 
 def convert_ros_message_to_json(message, base64_encoding=True):

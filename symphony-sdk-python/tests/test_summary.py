@@ -139,9 +139,7 @@ class TestTargetResultSpec(unittest.TestCase):
         data = {
             "status": "FAILED",
             "message": "Operation failed",
-            "components": {
-                "comp1": {"status": State.UPDATE_FAILED.value, "message": "Component update failed"}
-            },
+            "components": {"comp1": {"status": State.UPDATE_FAILED.value, "message": "Component update failed"}},
         }
 
         result = TargetResultSpec.from_dict(data)

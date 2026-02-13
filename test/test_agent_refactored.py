@@ -11,6 +11,7 @@
 #   Composiv.ai - initial API and implementation
 #
 
+import contextlib
 import unittest
 from unittest.mock import Mock
 
@@ -34,10 +35,8 @@ class TestAgentNode(unittest.TestCase):
         self.node = muto_agent.muto_agent.MutoAgent()
 
     def tearDown(self):
-        try:
+        with contextlib.suppress(BaseException):
             self.node.cleanup()
-        except:
-            pass
         self.node.destroy_node()
 
     def test_mqtt_node_create(self):
@@ -154,7 +153,7 @@ class TestTopicParser(unittest.TestCase):
     def test_empty_topic_parsing(self):
         try:
             self.parser.parse_topic("")
-            assert False, "Should have raised an exception for empty topic"
+            raise AssertionError("Should have raised an exception for empty topic")
         except Exception:
             pass  # Expected behavior
 

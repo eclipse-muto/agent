@@ -82,9 +82,7 @@ class MQTT(BaseNode):
             )
 
             # Initialize MQTT connection
-            self._mqtt_manager = MQTTConnectionManager(
-                self, self._config.mqtt, self._handle_mqtt_message
-            )
+            self._mqtt_manager = MQTTConnectionManager(self, self._config.mqtt, self._handle_mqtt_message)
 
             # Establish MQTT connection
             if not self._mqtt_manager.connect():
@@ -99,9 +97,7 @@ class MQTT(BaseNode):
         topics = self._config.topics
 
         self._pub_agent = self.create_publisher(Gateway, topics.gateway_to_agent_topic, 10)
-        self._sub_agent = self.create_subscription(
-            Gateway, topics.agent_to_gateway_topic, self._agent_msg_callback, 10
-        )
+        self._sub_agent = self.create_subscription(Gateway, topics.agent_to_gateway_topic, self._agent_msg_callback, 10)
         self._pub_thing = self.create_publisher(Thing, topics.thing_messages_topic, 10)
 
     def _handle_mqtt_message(self, message: MQTTMessage) -> None:
@@ -173,9 +169,7 @@ class MQTT(BaseNode):
         except Exception as e:
             self.get_logger().error(f"Failed to handle agent message: {e}")
 
-    def _publish_thing_message(
-        self, payload: dict, channel: str, action: str, meta: MutoActionMeta
-    ) -> None:
+    def _publish_thing_message(self, payload: dict, channel: str, action: str, meta: MutoActionMeta) -> None:
         """
         Publish Ditto thing message via ROS.
 
@@ -209,9 +203,7 @@ class MQTT(BaseNode):
 
             if self._pub_thing:
                 self._pub_thing.publish(msg_thing)
-                self.get_logger().debug(
-                    f"Thing message published for channel: {channel}, action: {action}"
-                )
+                self.get_logger().debug(f"Thing message published for channel: {channel}, action: {action}")
             else:
                 self.get_logger().error("Thing publisher not available")
 
@@ -238,9 +230,7 @@ class MQTT(BaseNode):
         """
         try:
             if not self._config or not self._mqtt_manager:
-                self.get_logger().error(
-                    "Cannot publish error: configuration or MQTT manager not initialized"
-                )
+                self.get_logger().error("Cannot publish error: configuration or MQTT manager not initialized")
                 return
 
             # Create error payload
@@ -258,9 +248,7 @@ class MQTT(BaseNode):
             }
 
             payload_json = json.dumps(error_payload)
-            response_topic = (
-                f"{self._config.mqtt.prefix}/{self._config.mqtt.namespace}:{self._config.mqtt.name}"
-            )
+            response_topic = f"{self._config.mqtt.prefix}/{self._config.mqtt.namespace}:{self._config.mqtt.name}"
 
             # Create MQTT properties
             properties = Properties(PacketTypes.PUBLISH)

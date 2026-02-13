@@ -11,6 +11,7 @@
 #   Composiv.ai - initial API and implementation
 #
 
+import contextlib
 import json
 import unittest
 from unittest.mock import patch
@@ -51,14 +52,12 @@ class TestCommandsPlugin(unittest.TestCase):
                 pass
 
     def tearDown(self):
-        try:
+        with contextlib.suppress(Exception):
             self.node.cleanup()
-        except Exception:
-            pass
         self.node.destroy_node()
 
     def test_commands_node_create(self):
-        assert self.node != None, "Node couldn't be created."
+        assert self.node is not None, "Node couldn't be created."
 
     @patch("muto_agent.commands.Command")
     def test_agent_msg_callback(self, MockCommand):
@@ -285,12 +284,6 @@ class TestParamCommands(unittest.TestCase):
         expected_response.result_code = 0
         expected_response.error_message = ""
         expected_response.error_description = ""
-        expected_payload = {
-            "params": [
-                {"name": "use_sim_time", "value": False},
-                {"name": "agent_to_commands_topic", "value": "msg_3"},
-            ]
-        }
 
         result = self.param_commands.callback_rosparam_list(req, res)
 

@@ -231,15 +231,13 @@ class DeploymentSpec:
     activeTarget: str = ""
 
     def get_components_slice(self) -> list[ComponentSpec]:
-        if self.solution != None:
+        if self.solution is not None:
             if (
                 self.componentStartIndex >= 0
                 and self.componentEndIndex >= 0
                 and self.componentEndIndex > self.componentStartIndex
             ):
-                return self.solution.spec.components[
-                    self.componentStartIndex : self.componentEndIndex
-                ]
+                return self.solution.spec.components[self.componentStartIndex : self.componentEndIndex]
             return self.solution.spec.components
         return []
 
@@ -305,16 +303,11 @@ class COABodyMixin:
                 # Encode bytes to base64
                 self.body = base64.b64encode(data).decode("utf-8")
             else:
-                raise ValueError(
-                    f"Binary content type requires bytes or base64 string, got {type(data)}"
-                )
+                raise ValueError(f"Binary content type requires bytes or base64 string, got {type(data)}")
 
         else:
             # Default fallback - treat as text
-            if isinstance(data, bytes):
-                text_str = data.decode("utf-8")
-            else:
-                text_str = str(data)
+            text_str = data.decode("utf-8") if isinstance(data, bytes) else str(data)
             self.body = base64.b64encode(text_str.encode("utf-8")).decode("utf-8")
 
     def get_body(self) -> Any:
@@ -333,7 +326,7 @@ class COABodyMixin:
                 json_str = base64.b64decode(self.body).decode("utf-8")
                 return json.loads(json_str)
             except (ValueError, json.JSONDecodeError) as e:
-                raise ValueError(f"Invalid JSON in body: {e}")
+                raise ValueError(f"Invalid JSON in body: {e}") from e
 
         elif self.content_type == "text/plain":
             # Return text string directly - no decoding necessary
@@ -500,9 +493,7 @@ def from_dict(data: dict[str, Any], cls: type) -> Any:
                     elif hasattr(field_type, "__origin__") and field_type.__origin__ is list:
                         if field_value and isinstance(field_value, list):
                             inner_type = field_type.__args__[0]
-                            kwargs[field_name] = [
-                                from_dict(item, inner_type) for item in field_value
-                            ]
+                            kwargs[field_name] = [from_dict(item, inner_type) for item in field_value]
                         else:
                             kwargs[field_name] = field_value or []
 

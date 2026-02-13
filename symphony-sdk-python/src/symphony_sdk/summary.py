@@ -9,6 +9,7 @@ This module provides Python translations of the Symphony API summary models
 from the original Go implementation.
 """
 
+import contextlib
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import IntEnum
@@ -46,9 +47,7 @@ class ComponentResultSpec:
     @classmethod
     def from_dict(cls, data: dict[str, any]) -> "ComponentResultSpec":
         """Create instance from dictionary."""
-        return cls(
-            status=State(data.get("status", State.OK.value)), message=data.get("message", "")
-        )
+        return cls(status=State(data.get("status", State.OK.value)), message=data.get("message", ""))
 
 
 @dataclass
@@ -72,9 +71,7 @@ class TargetResultSpec:
         if self.message:
             result["message"] = self.message
         if self.component_results:
-            result["components"] = {
-                name: comp_result.to_dict() for name, comp_result in self.component_results.items()
-            }
+            result["components"] = {name: comp_result.to_dict() for name, comp_result in self.component_results.items()}
         return result
 
     @classmethod
@@ -83,8 +80,7 @@ class TargetResultSpec:
         component_results = {}
         if "components" in data:
             component_results = {
-                name: ComponentResultSpec.from_dict(comp_data)
-                for name, comp_data in data["components"].items()
+                name: ComponentResultSpec.from_dict(comp_data) for name, comp_data in data["components"].items()
             }
 
         return cls(
@@ -211,9 +207,7 @@ class SummarySpec:
         }
 
         if self.target_results:
-            result["targets"] = {
-                name: target_result.to_dict() for name, target_result in self.target_results.items()
-            }
+            result["targets"] = {name: target_result.to_dict() for name, target_result in self.target_results.items()}
         if self.summary_message:
             result["message"] = self.summary_message
         if self.job_id:
@@ -227,8 +221,7 @@ class SummarySpec:
         target_results = {}
         if "targets" in data:
             target_results = {
-                name: TargetResultSpec.from_dict(target_data)
-                for name, target_data in data["targets"].items()
+                name: TargetResultSpec.from_dict(target_data) for name, target_data in data["targets"].items()
             }
 
         return cls(
@@ -293,10 +286,8 @@ class SummaryResult:
         # Parse time string
         time_obj = datetime.now()
         if "time" in data:
-            try:
+            with contextlib.suppress(ValueError, TypeError):
                 time_obj = datetime.fromisoformat(data["time"])
-            except (ValueError, TypeError):
-                pass
 
         return cls(
             summary=SummarySpec.from_dict(data.get("summary", {})),

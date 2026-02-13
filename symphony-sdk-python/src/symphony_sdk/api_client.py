@@ -36,9 +36,7 @@ import requests
 class SymphonyAPIError(Exception):
     """Custom exception for Symphony API errors."""
 
-    def __init__(
-        self, message: str, status_code: int | None = None, response_text: str | None = None
-    ):
+    def __init__(self, message: str, status_code: int | None = None, response_text: str | None = None):
         super().__init__(message)
         self.status_code = status_code
         self.response_text = response_text
@@ -86,9 +84,7 @@ class SymphonyAPI:
 
         # Session for connection reuse
         self._session = requests.Session()
-        self._session.headers.update(
-            {"Content-Type": "application/json", "User-Agent": "SymphonySDK/0.1.0"}
-        )
+        self._session.headers.update({"Content-Type": "application/json", "User-Agent": "SymphonySDK/0.1.0"})
 
     def __enter__(self):
         """Context manager entry."""
@@ -133,11 +129,9 @@ class SymphonyAPI:
 
         except requests.exceptions.RequestException as e:
             self.logger.error(f"Request failed: {e}")
-            raise SymphonyAPIError(f"Request failed: {str(e)}")
+            raise SymphonyAPIError(f"Request failed: {str(e)}") from e
 
-    def _handle_response(
-        self, response: requests.Response, expected_codes: list[int] = None
-    ) -> dict[str, Any]:
+    def _handle_response(self, response: requests.Response, expected_codes: list[int] = None) -> dict[str, Any]:
         """
         Handle API response and extract JSON data.
 
@@ -169,7 +163,7 @@ class SymphonyAPI:
         except json.JSONDecodeError as e:
             self.logger.error(f"Failed to parse JSON response: {e}")
             self.logger.error(f"Response body: {response.text}")
-            raise SymphonyAPIError(f"Invalid JSON response: {str(e)}")
+            raise SymphonyAPIError(f"Invalid JSON response: {str(e)}") from e
 
     def authenticate(self, force_refresh: bool = False) -> str:
         """
@@ -185,10 +179,13 @@ class SymphonyAPI:
             SymphonyAPIError: If authentication fails
         """
         # Check if we have a valid token
-        if not force_refresh and self._access_token and self._token_expiry:
-            # Use timezone-aware UTC datetimes
-            if datetime.now(timezone.utc) < self._token_expiry:
-                return self._access_token
+        if (
+            not force_refresh
+            and self._access_token
+            and self._token_expiry
+            and datetime.now(timezone.utc) < self._token_expiry
+        ):
+            return self._access_token
 
         self.logger.info(f"Authenticating with Symphony API as user '{self.username}'")
 
@@ -205,9 +202,7 @@ class SymphonyAPI:
         # Assume token is valid for ~1 hour (adjust based on Symphony configuration)
         # Use timezone-aware UTC datetimes and truncate seconds/micros
         self._token_expiry = datetime.now(timezone.utc).replace(microsecond=0, second=0)
-        self._token_expiry = self._token_expiry.replace(
-            minute=(self._token_expiry.minute + 50) % 60
-        )
+        self._token_expiry = self._token_expiry.replace(minute=(self._token_expiry.minute + 50) % 60)
 
         # Update session headers with token
         self._session.headers.update({"Authorization": f"Bearer {access_token}"})
@@ -274,9 +269,7 @@ class SymphonyAPI:
 
         return data
 
-    def get_target(
-        self, target_name: str, doc_type: str = "yaml", path: str = "$.spec"
-    ) -> dict[str, Any]:
+    def get_target(self, target_name: str, doc_type: str = "yaml", path: str = "$.spec") -> dict[str, Any]:
         """
         Get target specification.
 
@@ -398,9 +391,7 @@ class SymphonyAPI:
 
         return self._handle_response(response)
 
-    def get_solution(
-        self, solution_name: str, doc_type: str = "yaml", path: str = "$.spec"
-    ) -> dict[str, Any]:
+    def get_solution(self, solution_name: str, doc_type: str = "yaml", path: str = "$.spec") -> dict[str, Any]:
         """
         Get solution specification.
 
@@ -478,9 +469,7 @@ class SymphonyAPI:
 
         return self._handle_response(response)
 
-    def get_instance(
-        self, instance_name: str, doc_type: str = "yaml", path: str = "$.spec"
-    ) -> dict[str, Any]:
+    def get_instance(self, instance_name: str, doc_type: str = "yaml", path: str = "$.spec") -> dict[str, Any]:
         """
         Get instance specification.
 
@@ -586,9 +575,7 @@ class SymphonyAPI:
         response = self._make_request("DELETE", "/solution/instances")
         return self._handle_response(response)
 
-    def reconcile_solution(
-        self, deployment_spec: dict[str, Any], delete: bool = False
-    ) -> dict[str, Any]:
+    def reconcile_solution(self, deployment_spec: dict[str, Any], delete: bool = False) -> dict[str, Any]:
         """
         Direct reconcile/delete deployment (POST to /solution/reconcile).
 
@@ -606,9 +593,7 @@ class SymphonyAPI:
 
         params = {"delete": "true"} if delete else {}
 
-        response = self._make_request(
-            "POST", "/solution/reconcile", json=deployment_spec, params=params
-        )
+        response = self._make_request("POST", "/solution/reconcile", json=deployment_spec, params=params)
 
         return self._handle_response(response)
 

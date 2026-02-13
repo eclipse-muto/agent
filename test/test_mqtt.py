@@ -11,6 +11,7 @@
 #   Composiv.ai - initial API and implementation
 #
 
+import contextlib
 import json
 import unittest
 from unittest.mock import patch
@@ -45,14 +46,12 @@ class TestMQTTNode(unittest.TestCase):
                 pass
 
     def tearDown(self):
-        try:
+        with contextlib.suppress(Exception):
             self.node.cleanup()
-        except Exception:
-            pass
         self.node.destroy_node()
 
     def test_mqtt_node_create(self):
-        assert self.node != None, "Node couldn't be created."
+        assert self.node is not None, "Node couldn't be created."
 
     # agent message*
     # stack message*

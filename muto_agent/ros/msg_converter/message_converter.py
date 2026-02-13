@@ -88,7 +88,7 @@ def convert_dictionary_to_ros_message(
             service_class = get_service(message_type)
             message = service_class.Response()
         else:
-            raise ValueError('Unknown kind "%s".' % kind)
+            raise ValueError(f'Unknown kind "{kind}".')
     else:
         # message_type = message class (e.g., std_msgs.msg.String)
         message = message_type()
@@ -121,11 +121,8 @@ def set_message_fields(
         values = {}
     try:
         items = values.items()
-    except AttributeError:
-        raise TypeError(
-            "Value '%s' is expected to be a dictionary but is a %s"
-            % (values, type(values).__name__)
-        )
+    except AttributeError as e:
+        raise TypeError(f"Value '{values}' is expected to be a dictionary but is a {type(values).__name__}") from e
 
     remaining_message_fields = dict(_get_message_fields(msg))
 
@@ -163,13 +160,12 @@ def set_message_fields(
                 set_message_fields(value, field_value, strict_mode, check_missing_fields)
         rosidl_type = get_message_slot_types(msg)[field_name]
         # Check if field is an array of ROS messages
-        if isinstance(rosidl_type, AbstractNestedType):
-            if isinstance(rosidl_type.value_type, NamespacedType):
-                field_elem_type = import_message_from_namespaced_type(rosidl_type.value_type)
-                for n in range(len(value)):
-                    submsg = field_elem_type()
-                    set_message_fields(submsg, value[n], strict_mode, check_missing_fields)
-                    value[n] = submsg
+        if isinstance(rosidl_type, AbstractNestedType) and isinstance(rosidl_type.value_type, NamespacedType):
+            field_elem_type = import_message_from_namespaced_type(rosidl_type.value_type)
+            for n in range(len(value)):
+                submsg = field_elem_type()
+                set_message_fields(submsg, value[n], strict_mode, check_missing_fields)
+                value[n] = submsg
         setattr(msg, field_name, value)
 
     if check_missing_fields and remaining_message_fields:
@@ -220,7 +216,7 @@ def message_to_ordereddict(
     d = OrderedDict()
 
     # We rely on __slots__ retaining the order of the fields in the .msg file.
-    for field_name, field_type in zip(msg.__slots__, msg.SLOT_TYPES):
+    for field_name, field_type in zip(msg.__slots__, msg.SLOT_TYPES, strict=False):
         value = getattr(msg, field_name, None)
 
         value = _convert_value(
@@ -297,7 +293,7 @@ def _convert_value(
                     for v in value
                 ]
             )
-    elif isinstance(value, dict) or isinstance(value, OrderedDict):
+    elif isinstance(value, (dict, OrderedDict)):
         # Convert each key and value in the mapping
         new_value = {} if isinstance(value, dict) else OrderedDict()
         for k, v in value.items():
@@ -329,9 +325,7 @@ def __abbreviate_array_info(value, field_type):
     if isinstance(field_type, rosidl_parser.definition.Array):
         return f"<array type: {value_type_name}[{field_type.size}]>"
     elif isinstance(field_type, rosidl_parser.definition.BoundedSequence):
-        return (
-            f"<sequence type: {value_type_name}[{field_type.maximum_size}], length: {len(value)}>"
-        )
+        return f"<sequence type: {value_type_name}[{field_type.maximum_size}], length: {len(value)}>"
     elif isinstance(field_type, rosidl_parser.definition.UnboundedSequence):
         return f"<sequence type: {value_type_name}, length: {len(value)}>"
     return "unknown"
@@ -355,7 +349,7 @@ def __get_type_name(value_type):
 def _get_message_fields(message):
     # Workaround due to new python API https://github.com/ros2/rosidl_python/issues/99
     slots = [slot[1:] for slot in message.__slots__]  # remove leading underscore
-    return zip(slots, message.SLOT_TYPES)
+    return zip(slots, message.SLOT_TYPES, strict=False)
 
 
 if __name__ == "__main__":

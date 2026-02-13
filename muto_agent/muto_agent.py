@@ -101,21 +101,15 @@ class MutoAgent(BaseNode):
         topics = self._config.topics
 
         # Setup publishers
-        self._pub_dict["gateway"] = self.create_publisher(
-            Gateway, topics.agent_to_gateway_topic, 10
-        )
+        self._pub_dict["gateway"] = self.create_publisher(Gateway, topics.agent_to_gateway_topic, 10)
         self._pub_dict["stack"] = self.create_publisher(MutoAction, topics.stack_topic, 10)
-        self._pub_dict["commands"] = self.create_publisher(
-            MutoAction, topics.agent_to_commands_topic, 10
-        )
+        self._pub_dict["commands"] = self.create_publisher(MutoAction, topics.agent_to_commands_topic, 10)
 
         # Setup subscribers
         self._sub_dict["gateway"] = self.create_subscription(
             Gateway, topics.gateway_to_agent_topic, self._gateway_msg_callback, 10
         )
-        self._sub_dict["stack"] = self.create_subscription(
-            String, topics.twin_topic, self._composer_msg_callback, 10
-        )
+        self._sub_dict["stack"] = self.create_subscription(String, topics.twin_topic, self._composer_msg_callback, 10)
         self._sub_dict["commands"] = self.create_subscription(
             MutoAction, topics.commands_to_agent_topic, self._commands_msg_callback, 10
         )

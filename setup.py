@@ -19,7 +19,10 @@ setup(
     zip_safe=True,
     maintainer="Composive Team",
     maintainer_email="info@composiv.ai",
-    description="Eclipse Muto Agent - pluggable communication gateway bridging ROS 2 nodes with cloud backends via MQTT/Ditto and Symphony protocols",
+    description=(
+        "Eclipse Muto Agent - pluggable communication gateway bridging"
+        " ROS 2 nodes with cloud backends via MQTT/Ditto and Symphony protocols"
+    ),
     license="Eclipse Public License v2.0",
     entry_points={
         "console_scripts": [

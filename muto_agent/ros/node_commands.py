@@ -35,15 +35,9 @@ class NodeCommands:
     def __init__(self, node: Node) -> None:
         self.node = node
 
-        self.rosnode_list = self.node.create_service(
-            CommandPlugin, "rosnode_list", self.callback_rosnode_list
-        )
-        self.rosnode_info = self.node.create_service(
-            CommandPlugin, "rosnode_info", self.callback_rosnode_info
-        )
-        self.rosnode_ping = self.node.create_service(
-            CommandPlugin, "rosnode_ping", self.callback_rosnode_ping
-        )
+        self.rosnode_list = self.node.create_service(CommandPlugin, "rosnode_list", self.callback_rosnode_list)
+        self.rosnode_info = self.node.create_service(CommandPlugin, "rosnode_info", self.callback_rosnode_info)
+        self.rosnode_ping = self.node.create_service(CommandPlugin, "rosnode_ping", self.callback_rosnode_ping)
 
     def callback_rosnode_list(
         self, request: CommandPlugin.Request, response: CommandPlugin.Response
@@ -73,9 +67,7 @@ class NodeCommands:
             try:
                 info = self.get_node_info(node)
             except Exception as e:
-                self.node.get_logger().error(
-                    f"Couldn't get the information about the {node[0]}: {e}"
-                )
+                self.node.get_logger().error(f"Couldn't get the information about the {node[0]}: {e}")
                 info = {}
 
             if node[1] == "/":
@@ -107,13 +99,11 @@ class NodeCommands:
         result = {}
 
         requested_node = payload["node"]
-        if requested_node != None:
+        if requested_node is not None:
             try:
                 result = self.get_node_info(requested_node)
-            except:
-                self.node.get_logger().error(
-                    f"Couldn't get the information about the {requested_node}."
-                )
+            except Exception:
+                self.node.get_logger().error(f"Couldn't get the information about the {requested_node}.")
 
         response.output = self.node.construct_command_output_message(result)
         return response
@@ -140,10 +130,10 @@ class NodeCommands:
 
         try:
             discovered_nodes = self.get_discovered_nodes()
-        except:
+        except Exception:
             self.node.get_logger().error("Couldn't get the list of running nodes.")
 
-        if (requested_node != None) and (requested_node in discovered_nodes):
+        if (requested_node is not None) and (requested_node in discovered_nodes):
             result = {"status": True, "node": requested_node}
 
         response.output = self.node.construct_command_output_message(result)

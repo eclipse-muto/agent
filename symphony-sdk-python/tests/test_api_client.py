@@ -35,9 +35,7 @@ class TestSymphonyAPI(unittest.TestCase):
         self.base_url = "https://symphony.example.com"
         self.username = "testuser"
         self.password = "testpass"
-        self.client = SymphonyAPI(
-            base_url=self.base_url, username=self.username, password=self.password, timeout=10.0
-        )
+        self.client = SymphonyAPI(base_url=self.base_url, username=self.username, password=self.password, timeout=10.0)
 
     def tearDown(self):
         """Clean up after tests."""
