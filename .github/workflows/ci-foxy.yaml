@@ -43,4 +43,4 @@ jobs:
           cd /tmp/ws
           . /opt/ros/foxy/setup.sh
           . install/setup.sh
-          python -m pytest src/agent/test/ -v
+          python3 -m pytest src/agent/test/ -v
