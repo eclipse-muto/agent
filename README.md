@@ -2,7 +2,6 @@
 
 | ROS 2 Distro | Ubuntu | Python | Status |
 |---|---|---|---|
-| Foxy | 20.04 | 3.8 | [![Foxy](https://github.com/ibrahimsel/agent/actions/workflows/ci-foxy.yaml/badge.svg)](https://github.com/ibrahimsel/agent/actions/workflows/ci-foxy.yaml) |
 | Humble | 22.04 | 3.10 | [![Humble](https://github.com/ibrahimsel/agent/actions/workflows/ci-humble.yaml/badge.svg)](https://github.com/ibrahimsel/agent/actions/workflows/ci-humble.yaml) |
 | Jazzy | 24.04 | 3.12 | [![Jazzy](https://github.com/ibrahimsel/agent/actions/workflows/ci-jazzy.yaml/badge.svg)](https://github.com/ibrahimsel/agent/actions/workflows/ci-jazzy.yaml) |
 
