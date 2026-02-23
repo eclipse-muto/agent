@@ -17,7 +17,7 @@ setup(
     ],
     install_requires=["setuptools"],
     zip_safe=True,
-    maintainer="Composive Team",
+    maintainer="composiv.ai",
     maintainer_email="info@composiv.ai",
     description=(
         "Eclipse Muto Agent - pluggable communication gateway bridging"
