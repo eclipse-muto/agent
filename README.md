@@ -2,8 +2,8 @@
 
 | ROS 2 Distro | Ubuntu | Python | Status |
 |---|---|---|---|
-| Humble | 22.04 | 3.10 | [![Humble](https://github.com/ibrahimsel/agent/actions/workflows/ci-humble.yaml/badge.svg)](https://github.com/ibrahimsel/agent/actions/workflows/ci-humble.yaml) |
-| Jazzy | 24.04 | 3.12 | [![Jazzy](https://github.com/ibrahimsel/agent/actions/workflows/ci-jazzy.yaml/badge.svg)](https://github.com/ibrahimsel/agent/actions/workflows/ci-jazzy.yaml) |
+| Humble | 22.04 | 3.10 | [![Humble](https://github.com/eclipse-muto/agent/actions/workflows/ci-humble.yaml/badge.svg)](https://github.com/eclipse-muto/agent/actions/workflows/ci-humble.yaml) |
+| Jazzy | 24.04 | 3.12 | [![Jazzy](https://github.com/eclipse-muto/agent/actions/workflows/ci-jazzy.yaml/badge.svg)](https://github.com/eclipse-muto/agent/actions/workflows/ci-jazzy.yaml) |
 
 **Muto Agent** is the agnostic communication bridge within Eclipse Muto's declarative orchestrator for ROS software stacks on automotive edge devices. As the robot's secure gateway to any cloud backend, it features a pluggable architecture that makes Muto fundamentally agnostic to external systems, enabling interoperability with various cloud orchestrators and communication standards.
 
