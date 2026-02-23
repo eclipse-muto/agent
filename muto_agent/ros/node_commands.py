@@ -1,32 +1,25 @@
 #
-#  Copyright (c) 2023 Composiv.ai
+# Copyright (c) 2023 Composiv.ai
 #
-# All rights reserved. This program and the accompanying materials
-# are made available under the terms of the Eclipse Public License v2.0
-# and Eclipse Distribution License v1.0 which accompany this distribution.
+# This program and the accompanying materials are made available under the
+# terms of the Eclipse Public License 2.0 which is available at
+# http://www.eclipse.org/legal/epl-2.0.
 #
-# Licensed under the  Eclipse Public License v2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-# The Eclipse Public License is available at
-#    http://www.eclipse.org/legal/epl-v20.html
-# and the Eclipse Distribution License is available at
-#   http://www.eclipse.org/org/documents/edl-v10.php.
+# SPDX-License-Identifier: EPL-2.0
 #
 # Contributors:
-#    Composiv.ai - initial API and implementation
-#
+#   Composiv.ai - initial API and implementation
 #
 # Standard library imports
 import json
-from typing import List, Tuple, Dict, Any
+
+from muto_msgs.srv import CommandPlugin
 
 # Third-party imports
 from rclpy.node import Node
-from muto_msgs.srv import CommandPlugin
 
 
-class NodeCommands():
+class NodeCommands:
     """
     Class for managing rosnode commands.
 
@@ -42,17 +35,12 @@ class NodeCommands():
     def __init__(self, node: Node) -> None:
         self.node = node
 
-        self.rosnode_list = self.node.create_service(
-            CommandPlugin, "rosnode_list", self.callback_rosnode_list)
-        self.rosnode_info = self.node.create_service(
-            CommandPlugin, "rosnode_info", self.callback_rosnode_info)
-        self.rosnode_ping = self.node.create_service(
-            CommandPlugin, "rosnode_ping", self.callback_rosnode_ping)
+        self.rosnode_list = self.node.create_service(CommandPlugin, "rosnode_list", self.callback_rosnode_list)
+        self.rosnode_info = self.node.create_service(CommandPlugin, "rosnode_info", self.callback_rosnode_info)
+        self.rosnode_ping = self.node.create_service(CommandPlugin, "rosnode_ping", self.callback_rosnode_ping)
 
     def callback_rosnode_list(
-        self, 
-        request: CommandPlugin.Request, 
-        response: CommandPlugin.Response
+        self, request: CommandPlugin.Request, response: CommandPlugin.Response
     ) -> CommandPlugin.Response:
         """
         Callback function for handling rosnode_list service request.
@@ -87,7 +75,6 @@ class NodeCommands():
             else:
                 result["nodes"].append({"name": node[1] + "/" + node[0], "info": info})
 
-
         response.output = self.node.construct_command_output_message(result)
 
         return response
@@ -112,12 +99,11 @@ class NodeCommands():
         result = {}
 
         requested_node = payload["node"]
-        if requested_node != None:
+        if requested_node is not None:
             try:
                 result = self.get_node_info(requested_node)
-            except:
+            except Exception:
                 self.node.get_logger().error(f"Couldn't get the information about the {requested_node}.")
-
 
         response.output = self.node.construct_command_output_message(result)
         return response
@@ -144,12 +130,11 @@ class NodeCommands():
 
         try:
             discovered_nodes = self.get_discovered_nodes()
-        except:
-            self.node.get_logger().error(f"Couldn't get the list of running nodes.")
+        except Exception:
+            self.node.get_logger().error("Couldn't get the list of running nodes.")
 
-        if (requested_node != None) and (requested_node in discovered_nodes):
+        if (requested_node is not None) and (requested_node in discovered_nodes):
             result = {"status": True, "node": requested_node}
-
 
         response.output = self.node.construct_command_output_message(result)
 
@@ -191,12 +176,9 @@ class NodeCommands():
         name_space = n[1]
         info = {"name": node_name, "pubs": [], "subs": [], "services": []}
 
-        publishers = self.node.get_publisher_names_and_types_by_node(
-            node_name, name_space)
-        subscribers = self.node.get_subscriber_names_and_types_by_node(
-            node_name, name_space)
-        services = self.node.get_service_names_and_types_by_node(
-            node_name, name_space)
+        publishers = self.node.get_publisher_names_and_types_by_node(node_name, name_space)
+        subscribers = self.node.get_subscriber_names_and_types_by_node(node_name, name_space)
+        services = self.node.get_service_names_and_types_by_node(node_name, name_space)
 
         for topic, type in publishers:
             info["pubs"].append({"topic": topic, "type": type})

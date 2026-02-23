@@ -1,21 +1,14 @@
 #
-#  Copyright (c) 2023 Composiv.ai
+# Copyright (c) 2023 Composiv.ai
 #
-# All rights reserved. This program and the accompanying materials
-# are made available under the terms of the Eclipse Public License v2.0
-# and Eclipse Distribution License v1.0 which accompany this distribution.
+# This program and the accompanying materials are made available under the
+# terms of the Eclipse Public License 2.0 which is available at
+# http://www.eclipse.org/legal/epl-2.0.
 #
-# Licensed under the  Eclipse Public License v2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-# The Eclipse Public License is available at
-#    http://www.eclipse.org/legal/epl-v20.html
-# and the Eclipse Distribution License is available at
-#   http://www.eclipse.org/org/documents/edl-v10.php.
+# SPDX-License-Identifier: EPL-2.0
 #
 # Contributors:
-#    Composiv.ai - initial API and implementation
-#
+#   Composiv.ai - initial API and implementation
 #
 
 # Standard library imports
@@ -23,22 +16,20 @@ import json
 
 # Third-party imports
 import rclpy
-from rclpy.node import Node
 from muto_msgs.msg import (
-    MutoAction,
-    MutoActionMeta,
     CommandInput,
     CommandOutput,
+    MutoAction,
+    MutoActionMeta,
     PluginResponse,
 )
 from muto_msgs.srv import CommandPlugin
+from rclpy.node import Node
 
 # Local imports
-from agent.ros.node_commands import NodeCommands
-from agent.ros.topic_commands import TopicCommands
-from agent.ros.param_commands import ParamCommands
-from .command_executor import CommandExecutorService
-
+from muto_agent.ros.node_commands import NodeCommands
+from muto_agent.ros.param_commands import ParamCommands
+from muto_agent.ros.topic_commands import TopicCommands
 
 PLUGINS = {"CommandPlugin": CommandPlugin}
 
@@ -144,26 +135,18 @@ class ROSCommandsPlugin(Node):
         try:
             self.declare_parameter("agent_to_commands_topic", "msg_3")
             self.declare_parameter("commands_to_agent_topic", "msg4")
-        except:
+        except Exception:
             pass
 
         # Initialize Parameters
-        self.agent_to_commands_topic = self.get_parameter(
-            "agent_to_commands_topic"
-        ).value
-        self.commands_to_agent_topic = self.get_parameter(
-            "commands_to_agent_topic"
-        ).value
+        self.agent_to_commands_topic = self.get_parameter("agent_to_commands_topic").value
+        self.commands_to_agent_topic = self.get_parameter("commands_to_agent_topic").value
 
         self.commands = self.load_commands()
 
         # ROS Related
-        self.pub_agent = self.create_publisher(
-            MutoAction, self.commands_to_agent_topic, 10
-        )
-        self.sub_agent = self.create_subscription(
-            MutoAction, self.agent_to_commands_topic, self.agent_msg_callback, 10
-        )
+        self.pub_agent = self.create_publisher(MutoAction, self.commands_to_agent_topic, 10)
+        self.sub_agent = self.create_subscription(MutoAction, self.agent_to_commands_topic, self.agent_msg_callback, 10)
 
         # Command Service Definitions
         NodeCommands(self)
@@ -220,7 +203,6 @@ class ROSCommandsPlugin(Node):
         Args:
             data: The agent message data object.
         """
-        context = data.context
         method = data.method
         payload = data.payload
         meta = data.meta
@@ -298,9 +280,7 @@ class ROSCommandsPlugin(Node):
 
         self.pub_agent.publish(msg_telemetry_data)
 
-    def construct_command_output_message(
-        self, data, result_code=0, err_msg="", err_desc=""
-    ):
+    def construct_command_output_message(self, data, result_code=0, err_msg="", err_desc=""):
         """
         Constructs CommandOutput message.
 

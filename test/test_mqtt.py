@@ -1,31 +1,25 @@
 #
-#  Copyright (c) 2023 Composiv.ai
+# Copyright (c) 2023 Composiv.ai
 #
-# All rights reserved. This program and the accompanying materials
-# are made available under the terms of the Eclipse Public License v2.0
-# and Eclipse Distribution License v1.0 which accompany this distribution.
+# This program and the accompanying materials are made available under the
+# terms of the Eclipse Public License 2.0 which is available at
+# http://www.eclipse.org/legal/epl-2.0.
 #
-# Licensed under the  Eclipse Public License v2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-# The Eclipse Public License is available at
-#    http://www.eclipse.org/legal/epl-v20.html
-# and the Eclipse Distribution License is available at
-#   http://www.eclipse.org/org/documents/edl-v10.php.
+# SPDX-License-Identifier: EPL-2.0
 #
 # Contributors:
-#    Composiv.ai - initial API and implementation
-#
+#   Composiv.ai - initial API and implementation
 #
 
+import contextlib
+import json
 import unittest
 from unittest.mock import patch
-import json
 
 import rclpy
-
-import agent.mqtt
 from muto_msgs.msg import Gateway, Thing
+
+import muto_agent.mqtt
 
 
 class TestMQTTNode(unittest.TestCase):
@@ -38,7 +32,7 @@ class TestMQTTNode(unittest.TestCase):
         rclpy.shutdown()
 
     def setUp(self):
-        self.node = agent.mqtt.MQTT()
+        self.node = muto_agent.mqtt.MQTT()
         # Initialize the node to set up configuration and parameters
         try:
             self.node.initialize()
@@ -52,15 +46,12 @@ class TestMQTTNode(unittest.TestCase):
                 pass
 
     def tearDown(self):
-        try:
+        with contextlib.suppress(Exception):
             self.node.cleanup()
-        except Exception:
-            pass
         self.node.destroy_node()
 
-
     def test_mqtt_node_create(self):
-        assert self.node != None, "Node couldn't be created."
+        assert self.node is not None, "Node couldn't be created."
 
     # agent message*
     # stack message*
@@ -75,31 +66,32 @@ class TestMQTTNode(unittest.TestCase):
                 "headers": {
                     "content-type": "application/json",
                     "reply-to": "muto/org.eclipse.muto.sandbox:f1tenth",
-                    "correlation-id": "952f6b77-1d77-4555-a277-1b5bc3d6b6d6"
+                    "correlation-id": "952f6b77-1d77-4555-a277-1b5bc3d6b6d6",
                 },
                 "path": "/inbox/messages/agent/commands/ros/node",
-                "value": {}
+                "value": {},
             }
         ).encode("utf-8")
         mqtt_message.qos = ""
         mqtt_message.retain = ""
         mqtt_message.mid = ""
 
-
         self.node.received_message = None
         self.node.create_subscription(
             Gateway,
             self.node.get_parameter("gateway_to_agent_topic").value,
             lambda msg: setattr(self.node, "received_message", msg),
-            10
-        )   
+            10,
+        )
 
         self.node._handle_mqtt_message(mqtt_message)
 
         rclpy.spin_once(self.node, timeout_sec=3)
 
         assert type(self.node.received_message) == Gateway, "Problem sending Muto Gateway messages."
-        assert self.node.received_message.payload == mqtt_message.payload.decode("utf-8"), "Message changed."
+        assert self.node.received_message.payload == mqtt_message.payload.decode("utf-8"), (
+            "Message changed."
+        )
 
     @patch("paho.mqtt.client.MQTTMessage")
     def test_message_publish_stack_msg(self, mqtt_message):
@@ -110,33 +102,32 @@ class TestMQTTNode(unittest.TestCase):
                 "headers": {
                     "content-type": "application/json",
                     "reply-to": "muto/org.eclipse.muto.sandbox:f1tenth",
-                    "correlation-id": "b4cbf2d5-1a83-433e-94db-a8369d24a42b"
+                    "correlation-id": "b4cbf2d5-1a83-433e-94db-a8369d24a42b",
                 },
                 "path": "/inbox/messages/stack/commands/apply",
-                "value": {
-                    "stackId": "org.eclipse.muto.sandbox:composable_client_server"
-                }
+                "value": {"stackId": "org.eclipse.muto.sandbox:composable_client_server"},
             }
         ).encode("utf-8")
         mqtt_message.qos = ""
         mqtt_message.retain = ""
         mqtt_message.mid = ""
 
-
         self.node.received_message = None
         self.node.create_subscription(
             Gateway,
             self.node.get_parameter("gateway_to_agent_topic").value,
             lambda msg: setattr(self.node, "received_message", msg),
-            10
-        )   
+            10,
+        )
 
         self.node._handle_mqtt_message(mqtt_message)
 
         rclpy.spin_once(self.node, timeout_sec=3)
 
         assert type(self.node.received_message) == Gateway, "Problem sending Muto Gateway messages."
-        assert self.node.received_message.payload == mqtt_message.payload.decode("utf-8"), "Message changed."
+        assert self.node.received_message.payload == mqtt_message.payload.decode("utf-8"), (
+            "Message changed."
+        )
 
     @patch("paho.mqtt.client.MQTTMessage")
     def test_message_publish_twin_msg(self, mqtt_message):
@@ -146,28 +137,30 @@ class TestMQTTNode(unittest.TestCase):
                 "topic": "org.eclipse.muto.sandbox/f1tenth/things/twin/events/modified",
                 "headers": {
                     "content-type": "application/json",
-                    "correlation-id": "778ebbbb-ee5b-428f-a522-33651aa96e15"
+                    "correlation-id": "778ebbbb-ee5b-428f-a522-33651aa96e15",
                 },
                 "path": "/features/f1tenth/properties/vehicle_info/vehicle_info",
-                "value": {}
+                "value": {},
             }
         ).encode("utf-8")
         mqtt_message.qos = ""
         mqtt_message.retain = ""
         mqtt_message.mid = ""
 
-
         self.node.received_message = None
         self.node.create_subscription(
             Thing,
             self.node.get_parameter("thing_messages_topic").value,
             lambda msg: setattr(self.node, "received_message", msg),
-            10
-        )   
+            10,
+        )
 
         self.node._handle_mqtt_message(mqtt_message)
 
         rclpy.spin_once(self.node, timeout_sec=3)
 
         assert type(self.node.received_message) == Thing, "Problem sending Thing message."
-        assert self.node.received_message.path == json.loads(mqtt_message.payload.decode("utf-8"))["path"], "Message changed."
+        assert (
+            self.node.received_message.path
+            == json.loads(mqtt_message.payload.decode("utf-8"))["path"]
+        ), "Message changed."

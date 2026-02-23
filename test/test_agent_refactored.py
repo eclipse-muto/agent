@@ -1,33 +1,24 @@
 #
-#  Copyright (c) 2023 Composiv.ai
+# Copyright (c) 2023 Composiv.ai
 #
-# All rights reserved. This program and the accompanying materials
-# are made available under the terms of the Eclipse Public License v2.0
-# and Eclipse Distribution License v1.0 which accompany this distribution.
+# This program and the accompanying materials are made available under the
+# terms of the Eclipse Public License 2.0 which is available at
+# http://www.eclipse.org/legal/epl-2.0.
 #
-# Licensed under the  Eclipse Public License v2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-# The Eclipse Public License is available at
-#    http://www.eclipse.org/legal/epl-v20.html
-# and the Eclipse Distribution License is available at
-#   http://www.eclipse.org/org/documents/edl-v10.php.
+# SPDX-License-Identifier: EPL-2.0
 #
 # Contributors:
-#    Composiv.ai - initial API and implementation
-#
+#   Composiv.ai - initial API and implementation
 #
 
+import contextlib
 import unittest
-from unittest.mock import Mock, patch
-import json
+from unittest.mock import Mock
 
 import rclpy
-import agent.muto_agent
-from agent.config import ConfigurationManager
-from agent.topic_parser import MutoTopicParser
-from agent.interfaces import BaseNode
-from muto_msgs.msg import MutoAction, CommandOutput
+
+import muto_agent.muto_agent
+from muto_agent.topic_parser import MutoTopicParser
 
 
 class TestAgentNode(unittest.TestCase):
@@ -41,13 +32,11 @@ class TestAgentNode(unittest.TestCase):
 
     def setUp(self):
         # Create node without full initialization to avoid MQTT/service dependencies
-        self.node = agent.muto_agent.MutoAgent()
+        self.node = muto_agent.muto_agent.MutoAgent()
 
     def tearDown(self):
-        try:
+        with contextlib.suppress(BaseException):
             self.node.cleanup()
-        except:
-            pass
         self.node.destroy_node()
 
     def test_mqtt_node_create(self):
@@ -55,26 +44,29 @@ class TestAgentNode(unittest.TestCase):
 
     def test_node_has_topic_parser(self):
         # Initialize just the topic parser for testing
-        from agent.topic_parser import MutoTopicParser
+        from muto_agent.topic_parser import MutoTopicParser
+
         self.node._topic_parser = MutoTopicParser()
-        
+
         # Test that node has a topic parser
         parser = self.node.get_topic_parser()
         assert parser is not None, "Node should have a topic parser"
-    
+
     def test_config_manager(self):
         # Test config manager creation with a mock node
         mock_node = Mock()
         mock_node.get_parameters_by_prefix.return_value = {}
         mock_node.declare_parameter.return_value = None
-        
+
         # Mock parameter values
         def mock_get_parameter(key, default):
             return default  # Just return the default value
+
         mock_node.get_parameter.return_value.value = None
-        
+
         # Create a simpler mock that handles parameter access
-        from agent.config import AgentConfig, MQTTConfig, TopicConfig
+        from muto_agent.config import AgentConfig, MQTTConfig, TopicConfig
+
         simple_config = AgentConfig(
             mqtt=MQTTConfig(
                 host="localhost",
@@ -83,8 +75,8 @@ class TestAgentNode(unittest.TestCase):
                 user="test",
                 password="test",
                 namespace="test",
-                prefix="muto", 
-                name="test"
+                prefix="muto",
+                name="test",
             ),
             topics=TopicConfig(
                 stack_topic="stack",
@@ -93,84 +85,83 @@ class TestAgentNode(unittest.TestCase):
                 gateway_to_agent_topic="gateway_to_agent",
                 agent_to_commands_topic="agent_to_command",
                 commands_to_agent_topic="command_to_agent",
-                thing_messages_topic="thing_messages"
-            )
+                thing_messages_topic="thing_messages",
+            ),
         )
-        
+
         # Test basic config creation
         assert simple_config is not None, "Should be able to create config"
         assert simple_config.mqtt.port == 1883, "Port should be set correctly"
-    
+
     def test_parse_topic_via_parser(self):
         # Test parsing via the topic parser directly
         parser = MutoTopicParser()
-        
+
         # Agent command topic
         topic = "org.eclipse.muto.sandbox/f1tenth/things/live/messages/agent/commands/test"
         result = parser.parse_topic(topic)
         assert result == ("agent", "test"), f"Expected ('agent', 'test'), got {result}"
-        
-        # Stack command topic  
+
+        # Stack command topic
         topic = "org.eclipse.muto.sandbox:f1tenth/stack/commands/apply"
         result = parser.parse_topic(topic)
         assert result == ("stack", "apply"), f"Expected ('stack', 'apply'), got {result}"
 
 
 class TestTopicParser(unittest.TestCase):
-    
     def setUp(self):
         self.parser = MutoTopicParser()
-    
+
     def test_agent_topic_parsing(self):
         topic = "org.eclipse.muto.sandbox/f1tenth/things/live/messages/agent/commands/test"
         parsed = self.parser.parse_topic(topic)
-        
+
         assert parsed is not None, "Should parse agent topic successfully"
         assert parsed == ("agent", "test"), f"Expected ('agent', 'test'), got {parsed}"
-    
+
     def test_stack_topic_parsing(self):
         topic = "org.eclipse.muto.sandbox:f1tenth/stack/commands/apply"
         parsed = self.parser.parse_topic(topic)
-        
+
         assert parsed is not None, "Should parse stack topic"
         assert parsed == ("stack", "apply"), f"Expected ('stack', 'apply'), got {parsed}"
-    
+
     def test_ping_topic_parsing(self):
         topic = "org.eclipse.muto.sandbox/f1tenth/things/live/messages/agent/commands/ping"
         parsed = self.parser.parse_topic(topic)
-        
+
         assert parsed is not None, "Should parse ping topic"
         # Based on the original test, ping commands result in ("ping", None)
         assert parsed == ("ping", None), f"Expected ('ping', None), got {parsed}"
-    
+
     def test_telemetry_topic_parsing(self):
         topic = "org.eclipse.muto.sandbox/device/things/live/messages/telemetry"
         parsed = self.parser.parse_topic(topic)
-        
+
         assert parsed == (None, None), "Should return (None, None) for telemetry topic"
-    
+
     def test_invalid_topic_parsing(self):
         invalid_topic = "invalid/topic/format"
-        
+
         try:
             parsed = self.parser.parse_topic(invalid_topic)
             assert parsed == (None, None), "Should return (None, None) for invalid topic"
         except Exception:
             # Also acceptable to raise an exception
             pass
-    
+
     def test_empty_topic_parsing(self):
         try:
             self.parser.parse_topic("")
-            assert False, "Should have raised an exception for empty topic"
+            raise AssertionError("Should have raised an exception for empty topic")
         except Exception:
             pass  # Expected behavior
-    
+
     def test_is_valid_topic(self):
         # Test basic validation
         valid_topic = "org.eclipse.muto.sandbox/f1tenth/things/live/messages/agent/commands/test"
         invalid_topic = "invalid_topic"
-        
+
         assert self.parser.is_valid_topic(valid_topic), "Valid topic should pass validation"
         assert not self.parser.is_valid_topic(invalid_topic), "Invalid topic should be invalid"
 

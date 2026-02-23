@@ -1,19 +1,30 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>agent</name>
-  <version>1.0.0</version>
-  <description>Eclipse Muto Agent Package</description>
+  <name>muto_agent</name>
+  <version>0.42.0</version>
+  <description>Eclipse Muto Agent - pluggable communication gateway bridging ROS 2 nodes with cloud backends via MQTT/Ditto and Symphony protocols</description>
   <maintainer email="alp.sarica@eteration.com">Alp SARICA</maintainer>
-  <license>Eclipse Public License v2.0</license>
+  <license file="LICENSE">EPL-2.0</license>
 
+  <url type="website">https://eclipse.dev/muto/</url>
+  <url type="repository">https://github.com/eclipse-muto/agent</url>
+  <url type="bugtracker">https://github.com/eclipse-muto/agent/issues</url>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
   <test_depend>python3-pytest</test_depend>
 
   <depend>rclpy</depend>
   <depend>ros2launch</depend>
   <depend>muto_msgs</depend>
   <depend>ackermann_msgs</depend>
+  <depend>std_srvs</depend>
   <depend>python-paho-mqtt-pip</depend>
+  <depend>python3-requests</depend>
 
   <export>
     <build_type>ament_python</build_type>

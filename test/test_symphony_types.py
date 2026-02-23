@@ -3,22 +3,18 @@
 Comprehensive unit tests for Symphony SDK types and enumerations.
 """
 
-import unittest
 import asyncio
-from symphony_sdk.types import (
-    State,
-    Terminable,
-    get_http_status,
-    COAConstants
-)
+import unittest
+
+from symphony_sdk.types import COAConstants, State, get_http_status
 
 
 class MockTerminable:
     """Mock implementation of Terminable for testing."""
-    
+
     def __init__(self):
         self.shutdown_called = False
-    
+
     async def shutdown(self) -> None:
         """Mock shutdown method."""
         self.shutdown_called = True
@@ -26,16 +22,16 @@ class MockTerminable:
 
 class TestState(unittest.TestCase):
     """Test cases for State enumeration."""
-    
+
     def test_state_values(self):
         """Test that State enum has correct values."""
         # Basic states
         self.assertEqual(State.NONE, 0)
-        
+
         # HTTP Success states
         self.assertEqual(State.OK, 200)
         self.assertEqual(State.ACCEPTED, 202)
-        
+
         # HTTP Client Error states
         self.assertEqual(State.BAD_REQUEST, 400)
         self.assertEqual(State.UNAUTHORIZED, 401)
@@ -44,21 +40,21 @@ class TestState(unittest.TestCase):
         self.assertEqual(State.METHOD_NOT_ALLOWED, 405)
         self.assertEqual(State.CONFLICT, 409)
         self.assertEqual(State.STATUS_UNPROCESSABLE_ENTITY, 422)
-        
+
         # HTTP Server Error states
         self.assertEqual(State.INTERNAL_ERROR, 500)
-        
+
         # Config errors
         self.assertEqual(State.BAD_CONFIG, 1000)
         self.assertEqual(State.MISSING_CONFIG, 1001)
-        
+
         # Operation results
         self.assertEqual(State.UPDATE_FAILED, 8001)
         self.assertEqual(State.DELETE_FAILED, 8002)
         self.assertEqual(State.VALIDATE_FAILED, 8003)
         self.assertEqual(State.UPDATED, 8004)
         self.assertEqual(State.DELETED, 8005)
-        
+
         # Workflow status
         self.assertEqual(State.RUNNING, 9994)
         self.assertEqual(State.PAUSED, 9995)
@@ -77,9 +73,13 @@ class TestState(unittest.TestCase):
     def test_state_http_client_error_codes(self):
         """Test HTTP client error state codes."""
         client_error_states = [
-            State.BAD_REQUEST, State.UNAUTHORIZED, State.FORBIDDEN,
-            State.NOT_FOUND, State.METHOD_NOT_ALLOWED, State.CONFLICT,
-            State.STATUS_UNPROCESSABLE_ENTITY
+            State.BAD_REQUEST,
+            State.UNAUTHORIZED,
+            State.FORBIDDEN,
+            State.NOT_FOUND,
+            State.METHOD_NOT_ALLOWED,
+            State.CONFLICT,
+            State.STATUS_UNPROCESSABLE_ENTITY,
         ]
         for state in client_error_states:
             self.assertGreaterEqual(state, 400)
@@ -95,10 +95,14 @@ class TestState(unittest.TestCase):
     def test_state_custom_error_codes(self):
         """Test custom Symphony error codes."""
         custom_states = [
-            State.BAD_CONFIG, State.MISSING_CONFIG,
-            State.INVALID_ARGUMENT, State.API_REDIRECT,
-            State.FILE_ACCESS_ERROR, State.SERIALIZATION_ERROR,
-            State.DESERIALIZE_ERROR, State.DELETE_REQUESTED
+            State.BAD_CONFIG,
+            State.MISSING_CONFIG,
+            State.INVALID_ARGUMENT,
+            State.API_REDIRECT,
+            State.FILE_ACCESS_ERROR,
+            State.SERIALIZATION_ERROR,
+            State.DESERIALIZE_ERROR,
+            State.DELETE_REQUESTED,
         ]
         for state in custom_states:
             self.assertGreater(state, 999)  # All custom states > 999
@@ -118,32 +122,33 @@ class TestState(unittest.TestCase):
 
 class TestTerminable(unittest.TestCase):
     """Test cases for Terminable protocol."""
-    
+
     def test_terminable_protocol(self):
         """Test that objects implement Terminable protocol correctly."""
         mock_terminable = MockTerminable()
-        
+
         # Should have shutdown method
-        self.assertTrue(hasattr(mock_terminable, 'shutdown'))
-        self.assertTrue(callable(getattr(mock_terminable, 'shutdown')))
+        self.assertTrue(hasattr(mock_terminable, "shutdown"))
+        self.assertTrue(callable(mock_terminable.shutdown))
 
     def test_terminable_shutdown(self):
         """Test Terminable shutdown behavior."""
+
         async def run_test():
             mock_terminable = MockTerminable()
             self.assertFalse(mock_terminable.shutdown_called)
-            
+
             await mock_terminable.shutdown()
-            
+
             self.assertTrue(mock_terminable.shutdown_called)
-        
+
         # Run the async test
         asyncio.run(run_test())
 
 
 class TestHttpStatusFunction(unittest.TestCase):
     """Test cases for get_http_status function."""
-    
+
     def test_get_http_status_success_codes(self):
         """Test get_http_status with success codes."""
         self.assertEqual(get_http_status(200), State.OK)
@@ -164,24 +169,24 @@ class TestHttpStatusFunction(unittest.TestCase):
         # Test other success codes
         self.assertEqual(get_http_status(201), State.OK)
         self.assertEqual(get_http_status(204), State.OK)
-        
-        # Test other client error codes 
+
+        # Test other client error codes
         self.assertEqual(get_http_status(422), State.BAD_REQUEST)
-        
+
         # Test other server error codes
         self.assertEqual(get_http_status(503), State.INTERNAL_ERROR)
 
 
 class TestCOAConstants(unittest.TestCase):
     """Test cases for COA constants."""
-    
+
     def test_coa_constants_exist(self):
         """Test that COA constants are defined."""
         # Test some expected constants exist
-        self.assertTrue(hasattr(COAConstants, 'COA_META_HEADER'))
-        self.assertTrue(hasattr(COAConstants, 'TRACING_EXPORTER_CONSOLE'))
-        self.assertTrue(hasattr(COAConstants, 'PROVIDERS_CONFIG'))
-        
+        self.assertTrue(hasattr(COAConstants, "COA_META_HEADER"))
+        self.assertTrue(hasattr(COAConstants, "TRACING_EXPORTER_CONSOLE"))
+        self.assertTrue(hasattr(COAConstants, "PROVIDERS_CONFIG"))
+
         # Test values are strings
         self.assertEqual(COAConstants.COA_META_HEADER, "COA_META_HEADER")
         self.assertEqual(COAConstants.PROVIDERS_CONFIG, "providers.config")
@@ -192,5 +197,5 @@ class TestCOAConstants(unittest.TestCase):
         self.assertIsInstance(COAConstants.TRACING_EXPORTER_CONSOLE, str)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
