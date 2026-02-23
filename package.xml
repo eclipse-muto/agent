@@ -4,7 +4,7 @@
   <name>muto_agent</name>
   <version>0.42.0</version>
   <description>Eclipse Muto Agent - pluggable communication gateway bridging ROS 2 nodes with cloud backends via MQTT/Ditto and Symphony protocols</description>
-  <maintainer email="alp.sarica@eteration.com">Alp SARICA</maintainer>
+  <maintainer email="info@composiv.ai">composiv.ai</maintainer>
   <license file="LICENSE">EPL-2.0</license>
 
   <url type="website">https://eclipse.dev/muto/</url>
