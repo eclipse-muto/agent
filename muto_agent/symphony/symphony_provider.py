@@ -176,26 +176,28 @@ class MutoSymphonyProvider(BaseNode, SymphonyProvider):
         try:
             # Build target registration payload
             target_payload = {
-                "displayName": symphony.target,
-                "forceRedeploy": True,
-                "topologies": [
-                    {
-                        "bindings": [
-                            {
-                                "role": "muto-agent",
-                                "provider": symphony.provider_name,
-                                "config": {
-                                    "name": "proxy",
-                                    "brokerAddress": symphony.broker_address,
-                                    "clientID": symphony.client_id,
-                                    "requestTopic": f"{symphony.topic_prefix}/{symphony.request_topic}",
-                                    "responseTopic": f"{symphony.topic_prefix}/{symphony.response_topic}",
-                                    "timeoutSeconds": symphony.timeout_seconds,
-                                },
-                            }
-                        ]
-                    }
-                ],
+                "spec": {
+                    "displayName": symphony.target,
+                    "forceRedeploy": True,
+                    "topologies": [
+                        {
+                            "bindings": [
+                                {
+                                    "role": "muto-agent",
+                                    "provider": symphony.provider_name,
+                                    "config": {
+                                        "name": "proxy",
+                                        "brokerAddress": symphony.broker_address,
+                                        "clientID": symphony.client_id,
+                                        "requestTopic": f"{symphony.topic_prefix}/{symphony.request_topic}",
+                                        "responseTopic": f"{symphony.topic_prefix}/{symphony.response_topic}",
+                                        "timeoutSeconds": symphony.timeout_seconds,
+                                    },
+                                }
+                            ]
+                        }
+                    ],
+                }
             }
 
             # Register target using API client
