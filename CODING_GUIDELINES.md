@@ -123,6 +123,7 @@ def connect(self, timeout: int = 10) -> bool:
 ```python
 from typing import Optional, List
 
+
 def get_user(name: str) -> Optional[User]:
     pass
 ```
@@ -174,8 +175,8 @@ from rclpy.node import Node
 
 class MutoNode(Node):
     def __init__(self):
-        super().__init__('muto_node')
-        self.publisher = self.create_publisher(String, 'muto_topic', 10)
+        super().__init__("muto_node")
+        self.publisher = self.create_publisher(String, "muto_topic", 10)
 ```
 
 ### ROS 2 Interfaces
@@ -222,8 +223,9 @@ async def handle_request(request, response):
     await some_async_operation()
     return response
 
+
 # Registering the async callback (will not work as intended)
-service = node.create_service(MutoService, 'muto_service', handle_request)
+service = node.create_service(MutoService, "muto_service", handle_request)
 ```
 
 #### Use `asyncio.run_coroutine_threadsafe` to Schedule Coroutines in the Event Loop from Synchronous Code
@@ -247,11 +249,12 @@ import asyncio
 import rclpy
 from rclpy.node import Node
 
+
 class MyNode(Node):
     def __init__(self):
-        super().__init__('muto_node')
+        super().__init__("muto_node")
         self.loop = asyncio.get_event_loop()
-        self.service = self.create_service(MyService, 'muto_service', self.handle_request)
+        self.service = self.create_service(MyService, "muto_service", self.handle_request)
         self.timer = self.create_timer(0.1, self.run_event_loop)
 
     def run_event_loop(self):
@@ -261,10 +264,7 @@ class MyNode(Node):
 
     def handle_request(self, request, response):
         # Schedule the coroutine in the event loop
-        future = asyncio.run_coroutine_threadsafe(
-            self.async_operation(request),
-            self.loop
-        )
+        future = asyncio.run_coroutine_threadsafe(self.async_operation(request), self.loop)
         try:
             result = future.result(timeout=10)
             response.success = True
@@ -279,6 +279,7 @@ class MyNode(Node):
         # Asynchronous code here
         await asyncio.sleep(1)  # Simulate async I/O
         return "Operation completed"
+
 
 def main():
     rclpy.init()

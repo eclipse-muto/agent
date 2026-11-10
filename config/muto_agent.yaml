@@ -9,43 +9,12 @@
     thing_messages_topic: "thing_messages"
     mqtt_topic: "mqtt"
     ignored_packages: [""]
-
-
-    twin_url: "https://ditto:ditto@sandbox.composiv.ai"
-    host: sandbox.composiv.ai
-    port: 1883
-    keep_alive: 60
-    user: null
-    password: null
-    anonymous: true
     type: real_car
     attributes: '{"brand": "muto", "model": "composer"}'
     prefix: muto
     namespace: org.eclipse.muto.sandbox
     name: hack2025-01
-
     symphony_enabled: True
-    symphony_name: "hack2025-01"
-    symphony_target_name: "muto-device-001"
-    symphony_topic_prefix: "muto"
-    symphony_host: "192.168.0.47"
-    symphony_port: 1883
-    symphony_keep_alive: 60
-    symphony_prefix: muto
-    symphony_user: "admin"
-    symphony_password: ""
-
-    # Symphony API configuration
-    symphony_api_url: "http://192.168.0.47:8082/v1alpha2/"
-    symphony_provider_name: "providers.target.mqtt"
-    symphony_broker_address: "tcp://mosquitto:1883"
-    symphony_client_id: "symphony"
-    symphony_request_topic: "coa-request"
-    symphony_response_topic: "coa-response"
-    symphony_timeout_seconds: "30"
-    symphony_auto_register: False
-
-
     commands:
       command1:
         name: ros/topic
@@ -81,3 +50,33 @@
         name: ros/param/get
         service: rosparam_get
         plugin: CommandPlugin
+
+/muto/gateway:
+  ros__parameters:
+    twin_url: "https://ditto:ditto@sandbox.composiv.ai"
+    host: sandbox.composiv.ai
+    port: 1883
+    keep_alive: 60
+    user: null
+    password: null
+    anonymous: true
+
+/muto/muto_symphony_provider:
+  ros__parameters:
+    symphony_name: "hack2025-01"
+    symphony_target_name: "muto-device-001"
+    symphony_topic_prefix: "muto"
+    symphony_host: "192.168.0.47"
+    symphony_port: 1883
+    symphony_keep_alive: 60
+    symphony_prefix: muto
+    symphony_user: "admin"
+    symphony_password: ""
+    symphony_api_url: "http://192.168.0.47:8082/v1alpha2/"
+    symphony_provider_name: "providers.target.mqtt"
+    symphony_broker_address: "tcp://mosquitto:1883"
+    symphony_client_id: "symphony"
+    symphony_request_topic: "coa-request"
+    symphony_response_topic: "coa-response"
+    symphony_timeout_seconds: "30"
+    symphony_auto_register: False

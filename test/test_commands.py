@@ -271,6 +271,22 @@ class TestParamCommands(unittest.TestCase):
 
     def setUp(self):
         self.commnands_plugin_node = muto_agent.commands.ROSCommandsPlugin()
+
+        # Declare SAFE_PARAMS on node if not already declared
+        safe_params = {
+            "namespace": "org.eclipse.muto.sandbox",
+            "name": "hack2025-01",
+            "stack_topic": "stack",
+            "type": "real_car",
+            "anonymous": False,
+        }
+        for param_name, default_val in safe_params.items():
+            try:
+                if not self.commnands_plugin_node.has_parameter(param_name):
+                    self.commnands_plugin_node.declare_parameter(param_name, default_val)
+            except Exception:
+                pass
+
         self.param_commands = ParamCommands(self.commnands_plugin_node)
 
     def tearDown(self):
@@ -291,14 +307,20 @@ class TestParamCommands(unittest.TestCase):
         assert type(result.output) == CommandOutput
         assert type(result.output.result) == PluginResponse
 
-        # Parse payload and verify it contains at least the expected parameters
+        # Parse payload and verify only allowed safe parameters are returned
         payload_obj = json.loads(result.output.payload)
         assert isinstance(payload_obj, dict)
         assert "params" in payload_obj and isinstance(payload_obj["params"], list)
 
         params_map = {p.get("name"): p.get("value") for p in payload_obj["params"]}
-        assert params_map.get("use_sim_time") is False
-        assert params_map.get("agent_to_commands_topic") == "msg_3"
+        assert params_map.get("anonymous") is False
+        assert params_map.get("name") == "hack2025-01"
+        assert params_map.get("namespace") == "org.eclipse.muto.sandbox"
+        assert params_map.get("stack_topic") == "stack"
+        assert params_map.get("type") == "real_car"
+
+        # Parameters outside of SAFE_PARAMS must be filtered out
+        assert "use_sim_time" not in params_map
 
         # Result metadata should remain successful
         assert result.output.result == expected_response
@@ -307,13 +329,43 @@ class TestParamCommands(unittest.TestCase):
         req = CommandPlugin.Request()
         res = CommandPlugin.Response()
 
-        req.input.payload = json.dumps({"param": "use_sim_time"})
+        # 1. Test getting an allowed safe parameter
+        req.input.payload = json.dumps({"param": "anonymous"})
 
         expected_response = PluginResponse()
         expected_response.result_code = 0
         expected_response.error_message = ""
         expected_response.error_description = ""
-        expected_payload = {"name": "use_sim_time", "value": False}
+        expected_payload = {"name": "anonymous", "value": False}
+
+        result = self.param_commands.callback_rosparam_get(req, res)
+
+        assert type(result) == CommandPlugin.Response
+        assert type(result.output) == CommandOutput
+        assert type(result.output.result) == PluginResponse
+        assert result.output.payload == json.dumps(expected_payload)
+        assert result.output.result == expected_response
+
+        # 2. Test querying a parameter not in SAFE_PARAMS returns NOTFOUND
+        req.input.payload = json.dumps({"param": "use_sim_time"})
+        res_not_found = CommandPlugin.Response()
+        expected_not_found = {"status": "NOTFOUND"}
+
+        result_not_found = self.param_commands.callback_rosparam_get(req, res_not_found)
+        assert result_not_found.output.payload == json.dumps(expected_not_found)
+
+    def test_callback_rosparam_get_not_found(self):
+        req = CommandPlugin.Request()
+        res = CommandPlugin.Response()
+
+        # Explicit test for unknown or non-safe parameter returning NOTFOUND
+        req.input.payload = json.dumps({"param": "non_safe_parameter"})
+
+        expected_response = PluginResponse()
+        expected_response.result_code = 0
+        expected_response.error_message = ""
+        expected_response.error_description = ""
+        expected_payload = {"status": "NOTFOUND"}
 
         result = self.param_commands.callback_rosparam_get(req, res)
 
@@ -429,3 +481,7 @@ class TestTopicCommands(unittest.TestCase):
     def test_rostopic_echo(self):
         # TODO
         pass
+
+
+if __name__ == "__main__":
+    unittest.main()

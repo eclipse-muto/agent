@@ -179,9 +179,7 @@ class MutoSymphonyProvider(BaseNode, SymphonyProvider):
                 "spec": {
                     "displayName": symphony.target,
                     "forceRedeploy": True,
-                    "properties": {
-                        "group": symphony.properties_group
-                    },
+                    "properties": {"group": symphony.properties_group},
                     "topologies": [
                         {
                             "bindings": [
@@ -321,13 +319,12 @@ class MutoSymphonyProvider(BaseNode, SymphonyProvider):
         target_name = metadata.get("active-target")
         my_target = self.get_target_name()
 
-        if target_name and target_name != my_target:
+        if not target_name or target_name != my_target:
             self.logger.info(
                 f"Symphony apply ignored: Request target '{target_name}' does not match local target '{my_target}'"
             )
             return None
 
-        target_name = target_name or my_target
         self.logger.info(f"Symphony apply: deploying {len(components)} components for {target_name}")
 
         # Use summary models
@@ -414,13 +411,12 @@ class MutoSymphonyProvider(BaseNode, SymphonyProvider):
         target_name = metadata.get("active-target")
         my_target = self.get_target_name()
 
-        if target_name and target_name != my_target:
+        if not target_name or target_name != my_target:
             self.logger.info(
                 f"Symphony remove ignored: Request target '{target_name}' does not match local target '{my_target}'"
             )
             return None
 
-        target_name = target_name or my_target
         self.logger.info(f"Symphony remove: removing {len(components)} components for {target_name}")
 
         result = SummarySpec(target_count=1, is_removal=True)
@@ -501,7 +497,7 @@ class MutoSymphonyProvider(BaseNode, SymphonyProvider):
         target_name = metadata.get("active-target")
         my_target = self.get_target_name()
 
-        if target_name and target_name != my_target:
+        if not target_name or target_name != my_target:
             self.logger.info(
                 f"Symphony get ignored: Request target '{target_name}' does not match local target '{my_target}'"
             )
@@ -640,7 +636,7 @@ class MutoSymphonyProvider(BaseNode, SymphonyProvider):
         target_name = metadata.get("active-target")
         my_target = self.get_target_name()
 
-        if target_name and target_name != my_target:
+        if not target_name or target_name != my_target:
             self.logger.info(
                 f"Symphony needs_update ignored: Request target '{target_name}' "
                 f"does not match local target '{my_target}'"
@@ -674,7 +670,7 @@ class MutoSymphonyProvider(BaseNode, SymphonyProvider):
         target_name = metadata.get("active-target")
         my_target = self.get_target_name()
 
-        if target_name and target_name != my_target:
+        if not target_name or target_name != my_target:
             self.logger.info(
                 f"Symphony needs_remove ignored: Request target '{target_name}' "
                 f"does not match local target '{my_target}'"

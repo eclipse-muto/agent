@@ -78,7 +78,7 @@ class MQTTConnectionManager(ConnectionManager):
                 protocol=MQTTv5,
             )
 
-            if (self._config.user and self._config.password):
+            if self._config.user and self._config.password:
                 self._client.username_pw_set(self._config.user, self._config.password)
 
             # Set callbacks
