@@ -29,19 +29,19 @@ jobs:
           cd /tmp/ws
           . /opt/ros/humble/setup.sh
           rosdep update
-          rosdep install --from-paths src --ignore-src -r -y --rosdistro humble
+          rosdep install --from-paths src src/agent/muto_paho_mqtt_vendor --ignore-src -r -y --rosdistro humble
           pip3 install src/agent/symphony-sdk-python/
 
       - name: Build
         run: |
           cd /tmp/ws
           . /opt/ros/humble/setup.sh
-          colcon build --packages-select muto_msgs muto_agent
+          colcon build --base-paths src src/agent/muto_paho_mqtt_vendor --packages-select muto_msgs muto_paho_mqtt_vendor muto_agent
 
       - name: Test
         run: |
           cd /tmp/ws
           . /opt/ros/humble/setup.sh
           . install/setup.sh
-          colcon test --python-testing pytest --packages-select muto_agent --event-handlers console_direct+
+          colcon test --base-paths src src/agent/muto_paho_mqtt_vendor --python-testing pytest --packages-select muto_agent --event-handlers console_direct+
           colcon test-result --verbose
