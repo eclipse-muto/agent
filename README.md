@@ -118,8 +118,12 @@ The Agent acts as a central communication hub, receiving messages from the cloud
    ```bash
    cd $HOME/muto
    rosdep update
-   rosdep install --from-paths src --ignore-src -r -y
+   rosdep install --from-paths src src/agent/muto_paho_mqtt_vendor --ignore-src -r -y
    ```
+
+   > `paho-mqtt` (2.x) is provided by the `muto_paho_mqtt_vendor` package located
+   > inside the agent repository. Because colcon/rosdep do not search inside an
+   > existing package directory, its path must be passed explicitly.
 
 3. **Build the Package**
 
@@ -127,7 +131,7 @@ The Agent acts as a central communication hub, receiving messages from the cloud
 
    ```bash
    cd $HOME/muto
-   colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
+   colcon build --base-paths src src/agent/muto_paho_mqtt_vendor --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
    ```
 
 ## Usage

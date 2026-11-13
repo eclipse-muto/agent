@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>muto_paho_mqtt_vendor</name>
+  <version>0.42.0</version>
+  <description>Vendor package installing a pinned paho-mqtt (2.x) Python client for Eclipse Muto into the colcon install space</description>
+  <maintainer email="info@composiv.ai">composiv.ai</maintainer>
+  <license>EPL-2.0</license>
+
+  <url type="website">https://eclipse.dev/muto/</url>
+  <url type="repository">https://github.com/eclipse-muto/agent</url>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_python</buildtool_depend>
+  <build_depend>python3-pip</build_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
